@@ -1,0 +1,190 @@
+'use client'
+
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase'
+import type { Profile, Client } from '@/types'
+import { Save, Plus, Trash2 } from 'lucide-react'
+
+interface SettingsFormProps {
+  profile: Profile | null
+  clients: Client[]
+  userId: string
+}
+
+export default function SettingsForm({ profile, clients: initialClients, userId }: SettingsFormProps) {
+  const supabase = createClient()
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [clients, setClients] = useState(initialClients)
+  const [newClient, setNewClient] = useState({ name: '', company: '', email: '', phone: '' })
+  const [addingClient, setAddingClient] = useState(false)
+
+  const [form, setForm] = useState({
+    company_name: profile?.company_name || '',
+    company_address: profile?.company_address || '',
+    company_city: profile?.company_city || '',
+    company_postal: profile?.company_postal || '',
+    company_email: profile?.company_email || '',
+    company_phone: profile?.company_phone || '',
+    company_website: profile?.company_website || '',
+    company_kvk: profile?.company_kvk || '',
+    company_btw: profile?.company_btw || '',
+    company_iban: profile?.company_iban || '',
+    default_payment_days: profile?.default_payment_days || 30,
+    default_vat_rate: profile?.default_vat_rate || 21,
+    default_intro: profile?.default_intro || '',
+    default_footer: profile?.default_footer || '',
+  })
+
+  const handleSave = async () => {
+    setSaving(true)
+    await supabase.from('profiles').upsert({ id: userId, ...form, updated_at: new Date().toISOString() })
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleAddClient = async () => {
+    if (!newClient.name || !newClient.email) return
+    const { data } = await supabase.from('clients').insert({ ...newClient, user_id: userId }).select().single()
+    if (data) {
+      setClients([...clients, data])
+      setNewClient({ name: '', company: '', email: '', phone: '' })
+      setAddingClient(false)
+    }
+  }
+
+  const handleDeleteClient = async (id: string) => {
+    if (!confirm('Klant verwijderen?')) return
+    await supabase.from('clients').delete().eq('id', id)
+    setClients(clients.filter(c => c.id !== id))
+  }
+
+  const Field = ({ label, name, type = 'text', half = false }: { label: string; name: keyof typeof form; type?: string; half?: boolean }) => (
+    <div className={half ? 'col-span-1' : 'col-span-2'}>
+      <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
+      <input
+        type={type}
+        value={String(form[name])}
+        onChange={e => setForm({ ...form, [name]: type === 'number' ? Number(e.target.value) : e.target.value })}
+        className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* Company info */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h2 className="text-lg font-bold text-slate-900 mb-4">Bedrijfsgegevens</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Bedrijfsnaam" name="company_name" />
+          <Field label="Adres" name="company_address" />
+          <Field label="Postcode" name="company_postal" half />
+          <Field label="Stad" name="company_city" half />
+          <Field label="E-mail" name="company_email" type="email" half />
+          <Field label="Telefoon" name="company_phone" half />
+          <Field label="Website" name="company_website" half />
+          <Field label="KVK-nummer" name="company_kvk" half />
+          <Field label="BTW-nummer" name="company_btw" half />
+          <Field label="IBAN" name="company_iban" half />
+        </div>
+      </div>
+
+      {/* Defaults */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h2 className="text-lg font-bold text-slate-900 mb-4">Standaardinstellingen</h2>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Field label="Standaard betalingstermijn (dagen)" name="default_payment_days" type="number" half />
+          <Field label="Standaard BTW-tarief (%)" name="default_vat_rate" type="number" half />
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Standaard introductietekst</label>
+            <textarea
+              value={form.default_intro}
+              onChange={e => setForm({ ...form, default_intro: e.target.value })}
+              rows={4}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Standaard slottekst</label>
+            <textarea
+              value={form.default_footer}
+              onChange={e => setForm({ ...form, default_footer: e.target.value })}
+              rows={3}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+      >
+        <Save size={16} /> {saved ? 'Opgeslagen!' : saving ? 'Bezig...' : 'Opslaan'}
+      </button>
+
+      {/* Clients */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-900">Klanten</h2>
+          <button
+            onClick={() => setAddingClient(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl transition-colors"
+          >
+            <Plus size={14} /> Klant toevoegen
+          </button>
+        </div>
+
+        {addingClient && (
+          <div className="bg-slate-50 rounded-xl p-4 mb-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'Naam', key: 'name', placeholder: 'Jan Janssen' },
+                { label: 'Bedrijf', key: 'company', placeholder: 'Acme B.V.' },
+                { label: 'E-mail', key: 'email', placeholder: 'jan@acme.nl' },
+                { label: 'Telefoon', key: 'phone', placeholder: '+31612345678' },
+              ].map(({ label, key, placeholder }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
+                  <input
+                    value={newClient[key as keyof typeof newClient]}
+                    onChange={e => setNewClient({ ...newClient, [key]: e.target.value })}
+                    placeholder={placeholder}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setAddingClient(false)} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Annuleren</button>
+              <button onClick={handleAddClient} className="px-3 py-1.5 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">Toevoegen</button>
+            </div>
+          </div>
+        )}
+
+        <div className="divide-y divide-slate-100">
+          {clients.map(c => (
+            <div key={c.id} className="flex items-center justify-between py-3">
+              <div>
+                <p className="font-medium text-slate-800">{c.company || c.name}</p>
+                {c.company && <p className="text-sm text-slate-500">{c.name}</p>}
+                <p className="text-sm text-slate-500">{c.email}</p>
+              </div>
+              <button onClick={() => handleDeleteClient(c.id)} className="text-slate-300 hover:text-red-500 transition-colors">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+          {clients.length === 0 && !addingClient && (
+            <p className="text-slate-400 text-sm py-4 text-center">Nog geen klanten toegevoegd</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
