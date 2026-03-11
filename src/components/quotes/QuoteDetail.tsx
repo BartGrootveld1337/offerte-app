@@ -106,6 +106,10 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
   const [savingNotes, setSavingNotes] = useState(false)
 
   const handleSaveNotes = async () => {
+    if (notes.length > 5000) {
+      toast.error('Notities mogen maximaal 5000 tekens bevatten')
+      return
+    }
     setSavingNotes(true)
     await supabaseClient.from('quotes').update({ notes }).eq('id', quote.id)
     setSavingNotes(false)

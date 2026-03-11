@@ -55,14 +55,19 @@ export default async function InvoicePage({ params }: { params: Promise<{ quoteI
     const dueDate = new Date()
     dueDate.setDate(dueDate.getDate() + paymentDays)
 
+    // Use upsert with onConflict to handle race conditions
+    // The unique constraint on quote_id means only one invoice is ever created
     const { data: newInvoice } = await supabase
       .from('invoices')
-      .insert({
-        quote_id: quoteId,
-        user_id: user.id,
-        invoice_number: invoiceNumber,
-        due_date: dueDate.toISOString().split('T')[0],
-      })
+      .upsert(
+        {
+          quote_id: quoteId,
+          user_id: user.id,
+          invoice_number: invoiceNumber,
+          due_date: dueDate.toISOString().split('T')[0],
+        },
+        { onConflict: 'quote_id', ignoreDuplicates: false }
+      )
       .select()
       .single()
 

@@ -13,6 +13,9 @@ export async function POST() {
     .eq('status', 'sent')
     .lt('valid_until', new Date().toISOString())
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[expire quotes]', error.message)
+    return NextResponse.json({ error: 'Er is een serverfout opgetreden' }, { status: 500 })
+  }
   return NextResponse.json({ updated: count || 0 })
 }

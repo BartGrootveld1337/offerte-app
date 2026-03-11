@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import type { QuoteItem } from '@/types'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -9,6 +11,7 @@ export async function POST(req: NextRequest) {
 
   const { quoteId } = await req.json()
   if (!quoteId) return NextResponse.json({ error: 'quoteId required' }, { status: 400 })
+  if (!UUID_REGEX.test(quoteId)) return NextResponse.json({ error: 'Ongeldig quoteId formaat' }, { status: 400 })
 
   // Fetch original quote + items
   const { data: original, error: fetchError } = await supabase
