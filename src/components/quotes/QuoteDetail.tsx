@@ -82,7 +82,8 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
       }),
     })
     if (res.ok) {
-      await supabaseClient.from('quotes').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', quote.id)
+      // CVE-001: Server-side status transition to prevent business logic bypass
+      await fetch(`/api/quotes/${quote.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'sent' }) })
       setSent(true)
       setShowSendModal(false)
       toast.success(`Offerte verstuurd naar ${clientEmail}`)
@@ -248,7 +249,8 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
           </div>
           <button
             onClick={async () => {
-              await supabaseClient.from('quotes').update({ status: 'expired' }).eq('id', quote.id)
+              // CVE-001: Server-side status transition
+              await fetch(`/api/quotes/${quote.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'expired' }) })
               toast.success('Status bijgewerkt naar Verlopen')
               router.refresh()
             }}

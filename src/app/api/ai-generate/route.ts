@@ -7,12 +7,14 @@ import { createServerClient } from '@supabase/ssr'
 import { rateLimit, getIp } from '@/lib/rate-limit'
 
 function getOpenAIKey(): string {
+  // CVE-004: Always prefer env var in production — filesystem read is dev-only fallback
+  if (process.env.OPENAI_API_KEY) return process.env.OPENAI_API_KEY
   try {
-    const secretPath = join(process.env.HOME || '/home/bartgrootveld', '.openclaw/secrets/openai.json')
+    const secretPath = join(process.env.HOME || '/root', '.openclaw/secrets/openai.json')
     const secrets = JSON.parse(readFileSync(secretPath, 'utf-8'))
     return secrets.api_key || secrets.apiKey || ''
   } catch {
-    return process.env.OPENAI_API_KEY || ''
+    return ''
   }
 }
 

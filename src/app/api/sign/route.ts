@@ -61,13 +61,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Offerte is al verwerkt' }, { status: 400 })
   }
 
+  // CVE-003: Block signing of expired quotes
+  if (quote.status === 'expired') {
+    return NextResponse.json({ error: 'Deze offerte is verlopen en kan niet meer worden ondertekend' }, { status: 400 })
+  }
+
+  // CVE-003: Also check valid_until date explicitly
+  if (quote.valid_until && new Date(quote.valid_until) < new Date()) {
+    return NextResponse.json({ error: 'Deze offerte is verlopen en kan niet meer worden ondertekend' }, { status: 400 })
+  }
+
   if (action === 'decline') {
     const { error } = await supabase.from('quotes').update({
       status: 'declined',
       declined_reason: declinedReason || null,
     }).eq('id', quote.id)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+    console.error("[sign route]", error.message)
+    return NextResponse.json({ error: "Er is een fout opgetreden" }, { status: 500 })
+  }
 
     // Log event
     await supabase.from('quote_events').insert({
@@ -107,7 +120,7 @@ export async function POST(req: NextRequest) {
         )
 
         await resend.emails.send({
-          from: 'Vrijdag.AI Offerte <offerte@vrijdag.ai>',
+          from: 'Vrijdag.AI Offerte <bart@vrijdag.ai>',
           to: profile.company_email,
           subject: `Offerte ${quote.quote_number} afgewezen`,
           html,
@@ -135,7 +148,10 @@ export async function POST(req: NextRequest) {
     signature_url: signatureData,
   }).eq('id', quote.id)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error("[sign route]", error.message)
+    return NextResponse.json({ error: "Er is een fout opgetreden" }, { status: 500 })
+  }
 
   // Log event
   await supabase.from('quote_events').insert({
@@ -185,7 +201,7 @@ export async function POST(req: NextRequest) {
       )
 
       await resend.emails.send({
-        from: 'Vrijdag.AI Offerte <offerte@vrijdag.ai>',
+        from: 'Vrijdag.AI Offerte <bart@vrijdag.ai>',
         to: profile.company_email,
         subject: `✅ Offerte ${quote.quote_number} ondertekend`,
         html,
