@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Navbar from '@/components/ui/Navbar'
@@ -9,10 +11,12 @@ export default async function NewQuotePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: clients }, { data: profile }, { count }] = await Promise.all([
+  const [{ data: clients }, { data: profile }, { count }, { data: catalogItems }, { data: templates }] = await Promise.all([
     supabase.from('clients').select('*').eq('user_id', user.id).order('name'),
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('catalog_items').select('*').eq('user_id', user.id).order('name'),
+    supabase.from('quote_templates').select('*').eq('user_id', user.id).order('name'),
   ])
 
   const nextNumber = generateQuoteNumber((count || 0) + 1)
@@ -27,6 +31,8 @@ export default async function NewQuotePage() {
         </div>
         <QuoteForm
           clients={clients || []}
+          catalogItems={catalogItems || []}
+          templates={templates || []}
           defaultVat={profile?.default_vat_rate || 21}
           defaultIntro={profile?.default_intro || ''}
           defaultFooter={profile?.default_footer || ''}

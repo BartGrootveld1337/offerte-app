@@ -60,11 +60,15 @@ export interface Quote {
   subtotal: number
   vat_amount: number
   total: number
+  discount_percent?: number
+  discount_amount?: number
   sign_token?: string
   signed_at?: string
   signed_name?: string
   signed_ip?: string
   signature_url?: string
+  signed_reason?: string
+  declined_reason?: string
   sent_at?: string
   pdf_url?: string
   notes?: string
@@ -72,4 +76,53 @@ export interface Quote {
   updated_at: string
   clients?: Client
   quote_items?: QuoteItem[]
+}
+
+export interface CatalogItem {
+  id: string
+  user_id: string
+  name: string
+  description?: string
+  unit: string
+  unit_price: number
+  vat_rate: number
+  category?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface QuoteEvent {
+  id: string
+  quote_id: string
+  event_type: string
+  ip_address?: string
+  user_agent?: string
+  created_at: string
+}
+
+export interface QuoteTemplate {
+  id: string
+  user_id: string
+  name: string
+  title?: string
+  intro?: string
+  footer?: string
+  items: Array<{
+    description: string
+    quantity: number
+    unit: string
+    unit_price: number
+    vat_rate: number
+  }>
+  created_at: string
+}
+
+export interface ApiKey {
+  id: string
+  user_id: string
+  name: string
+  key_hash: string
+  key_prefix: string
+  created_at: string
+  last_used_at?: string
 }

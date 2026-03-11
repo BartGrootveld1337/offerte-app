@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@/lib/supabase-server'
 import { redirect, notFound } from 'next/navigation'
 import Navbar from '@/components/ui/Navbar'
@@ -23,13 +25,21 @@ export default async function QuoteDetailPage({ params, searchParams }: {
 
   if (!quote) notFound()
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const [{ data: profile }, { data: events }] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase.from('quote_events').select('*').eq('quote_id', id).order('created_at', { ascending: false }),
+  ])
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <main className="max-w-4xl mx-auto px-6 py-8">
-        <QuoteDetail quote={quote} profile={profile} autoSend={action === 'send'} />
+        <QuoteDetail
+          quote={quote}
+          profile={profile}
+          events={events || []}
+          autoSend={action === 'send'}
+        />
       </main>
     </div>
   )

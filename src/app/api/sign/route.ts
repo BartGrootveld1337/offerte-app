@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function POST(req: NextRequest) {
-  const { token, signedName, signatureData } = await req.json()
-  const ip = req.headers.get('x-forwarded-for') || 'unknown'
+  const { token, signedName, signatureData, action, declinedReason } = await req.json()
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown'
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,11 +17,38 @@ export async function POST(req: NextRequest) {
     .eq('sign_token', token)
     .single()
 
-  if (!quote || quote.status === 'signed') {
-    return NextResponse.json({ error: 'Invalid or already signed' }, { status: 400 })
+  if (!quote) {
+    return NextResponse.json({ error: 'Offerte niet gevonden' }, { status: 404 })
   }
 
-  // Store signature as data URL in storage or directly
+  if (quote.status === 'signed' || quote.status === 'declined') {
+    return NextResponse.json({ error: 'Offerte is al verwerkt' }, { status: 400 })
+  }
+
+  if (action === 'decline') {
+    const { error } = await supabase.from('quotes').update({
+      status: 'declined',
+      declined_reason: declinedReason || null,
+    }).eq('id', quote.id)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Log event
+    await supabase.from('quote_events').insert({
+      quote_id: quote.id,
+      event_type: 'declined',
+      ip_address: ip,
+      user_agent: req.headers.get('user-agent') || '',
+    })
+
+    return NextResponse.json({ success: true, action: 'declined' })
+  }
+
+  // Default: sign
+  if (!signedName) {
+    return NextResponse.json({ error: 'Naam is verplicht' }, { status: 400 })
+  }
+
   const { error } = await supabase.from('quotes').update({
     status: 'signed',
     signed_at: new Date().toISOString(),
@@ -32,5 +59,13 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ success: true })
+  // Log event
+  await supabase.from('quote_events').insert({
+    quote_id: quote.id,
+    event_type: 'signed',
+    ip_address: ip,
+    user_agent: req.headers.get('user-agent') || '',
+  })
+
+  return NextResponse.json({ success: true, action: 'signed' })
 }

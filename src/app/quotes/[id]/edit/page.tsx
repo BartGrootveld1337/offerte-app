@@ -1,8 +1,9 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@/lib/supabase-server'
 import { redirect, notFound } from 'next/navigation'
 import Navbar from '@/components/ui/Navbar'
 import QuoteForm from '@/components/quotes/QuoteForm'
-import { generateQuoteNumber } from '@/lib/utils'
 
 export default async function EditQuotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -10,11 +11,13 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: quote }, { data: clients }, { data: profile }] = await Promise.all([
+  const [{ data: quote }, { data: clients }, { data: profile }, { data: catalogItems }, { data: templates }] = await Promise.all([
     supabase.from('quotes').select('*, quote_items(*)').eq('id', id).eq('user_id', user.id)
       .order('sort_order', { foreignTable: 'quote_items' }).single(),
     supabase.from('clients').select('*').eq('user_id', user.id).order('name'),
     supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase.from('catalog_items').select('*').eq('user_id', user.id).order('name'),
+    supabase.from('quote_templates').select('*').eq('user_id', user.id).order('name'),
   ])
 
   if (!quote) notFound()
@@ -30,6 +33,8 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
         <QuoteForm
           quote={quote}
           clients={clients || []}
+          catalogItems={catalogItems || []}
+          templates={templates || []}
           defaultVat={profile?.default_vat_rate || 21}
           defaultIntro={profile?.default_intro || ''}
           defaultFooter={profile?.default_footer || ''}

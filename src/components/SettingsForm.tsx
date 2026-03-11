@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Profile, Client } from '@/types'
 import { Save, Plus, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface SettingsFormProps {
   profile: Profile | null
@@ -14,7 +15,6 @@ interface SettingsFormProps {
 export default function SettingsForm({ profile, clients: initialClients, userId }: SettingsFormProps) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [clients, setClients] = useState(initialClients)
   const [newClient, setNewClient] = useState({ name: '', company: '', email: '', phone: '' })
   const [addingClient, setAddingClient] = useState(false)
@@ -38,26 +38,31 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
 
   const handleSave = async () => {
     setSaving(true)
-    await supabase.from('profiles').upsert({ id: userId, ...form, updated_at: new Date().toISOString() })
+    const { error } = await supabase.from('profiles').upsert({ id: userId, ...form, updated_at: new Date().toISOString() })
     setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    if (error) {
+      toast.error('Fout bij opslaan: ' + error.message)
+    } else {
+      toast.success('Instellingen opgeslagen!')
+    }
   }
 
   const handleAddClient = async () => {
-    if (!newClient.name || !newClient.email) return
-    const { data } = await supabase.from('clients').insert({ ...newClient, user_id: userId }).select().single()
+    if (!newClient.name || !newClient.email) { toast.error('Naam en e-mail zijn verplicht'); return }
+    const { data, error } = await supabase.from('clients').insert({ ...newClient, user_id: userId }).select().single()
+    if (error) { toast.error('Fout: ' + error.message); return }
     if (data) {
       setClients([...clients, data])
       setNewClient({ name: '', company: '', email: '', phone: '' })
       setAddingClient(false)
+      toast.success('Klant toegevoegd')
     }
   }
 
   const handleDeleteClient = async (id: string) => {
-    if (!confirm('Klant verwijderen?')) return
     await supabase.from('clients').delete().eq('id', id)
     setClients(clients.filter(c => c.id !== id))
+    toast.success('Klant verwijderd')
   }
 
   const Field = ({ label, name, type = 'text', half = false }: { label: string; name: keyof typeof form; type?: string; half?: boolean }) => (
@@ -125,19 +130,22 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
         disabled={saving}
         className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
       >
-        <Save size={16} /> {saved ? 'Opgeslagen!' : saving ? 'Bezig...' : 'Opslaan'}
+        <Save size={16} /> {saving ? 'Bezig...' : 'Opslaan'}
       </button>
 
       {/* Clients */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-slate-900">Klanten</h2>
-          <button
-            onClick={() => setAddingClient(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl transition-colors"
-          >
-            <Plus size={14} /> Klant toevoegen
-          </button>
+          <h2 className="text-lg font-bold text-slate-900">Snelklanten</h2>
+          <div className="flex gap-2">
+            <a href="/clients" className="text-sm text-blue-600 hover:underline">Alle klanten beheren →</a>
+            <button
+              onClick={() => setAddingClient(true)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl transition-colors"
+            >
+              <Plus size={14} /> Toevoegen
+            </button>
+          </div>
         </div>
 
         {addingClient && (
