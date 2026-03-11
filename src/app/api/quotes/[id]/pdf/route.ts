@@ -3,6 +3,15 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+}
+
 // We use a custom HTML-to-PDF approach via jsPDF since react-pdf has SSR limitations
 // This renders a clean HTML string that's returned as a downloadable HTML file
 // For a proper PDF, use the print dialog or a headless browser
@@ -13,6 +22,23 @@ export async function GET(
   const { id } = await params
   const cookieStore = await cookies()
 
+  // Auth check: use anon key to verify session
+  const supabaseAuth = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => {},
+      },
+    }
+  )
+  const { data: { user } } = await supabaseAuth.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
+
+  // Use service role client for data fetching
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -34,6 +60,11 @@ export async function GET(
     return NextResponse.json({ error: 'Offerte niet gevonden' }, { status: 404 })
   }
 
+  // Ownership check
+  if (quote.user_id !== user.id) {
+    return NextResponse.json({ error: 'Geen toegang' }, { status: 403 })
+  }
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
@@ -46,20 +77,43 @@ export async function GET(
     .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
     .map((item: { description: string; quantity: number; unit: string; unit_price: number; vat_rate: number; line_total: number }) => `
       <tr>
-        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#1e293b;">${item.description}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#64748b;">${item.quantity} ${item.unit}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#1e293b;">${escapeHtml(String(item.description || ''))}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#64748b;">${item.quantity} ${escapeHtml(String(item.unit || ''))}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:right;color:#64748b;">${formatCurrency(item.unit_price)}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#64748b;">${item.vat_rate}%</td>
         <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;color:#1e293b;">${formatCurrency(item.line_total)}</td>
       </tr>
     `).join('')
 
+  // Escape all user-derived data fields
+  const eTitle = escapeHtml(String(quote.title || ''))
+  const eQuoteNumber = escapeHtml(String(quote.quote_number || ''))
+  const eIntro = escapeHtml(String(quote.intro || ''))
+  const eFooter = escapeHtml(String(quote.footer || ''))
+  const eSignedName = escapeHtml(String(quote.signed_name || ''))
+
+  const eCompanyName = escapeHtml(String(profile?.company_name || ''))
+  const eCompanyAddress = escapeHtml(String(profile?.company_address || ''))
+  const eCompanyCity = escapeHtml(String(profile?.company_city || ''))
+  const eCompanyPostal = escapeHtml(String(profile?.company_postal || ''))
+  const eCompanyEmail = escapeHtml(String(profile?.company_email || ''))
+  const eCompanyPhone = escapeHtml(String(profile?.company_phone || ''))
+  const eCompanyKvk = escapeHtml(String(profile?.company_kvk || ''))
+  const eCompanyBtw = escapeHtml(String(profile?.company_btw || ''))
+
+  const eClientCompany = quote.clients ? escapeHtml(String(quote.clients.company || '')) : ''
+  const eClientName = quote.clients ? escapeHtml(String(quote.clients.name || '')) : ''
+  const eClientEmail = quote.clients ? escapeHtml(String(quote.clients.email || '')) : ''
+  const eClientAddress = quote.clients ? escapeHtml(String(quote.clients.address || '')) : ''
+  const eClientPostal = quote.clients ? escapeHtml(String(quote.clients.postal || '')) : ''
+  const eClientCity = quote.clients ? escapeHtml(String(quote.clients.city || '')) : ''
+
   const html = `<!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Offerte ${quote.quote_number}</title>
+  <title>Offerte ${eQuoteNumber}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b; background: white; }
@@ -98,8 +152,8 @@ export async function GET(
 <div class="page">
   <div class="header">
     <div>
-      <h1>${quote.title}</h1>
-      <div class="number">${quote.quote_number}</div>
+      <h1>${eTitle}</h1>
+      <div class="number">${eQuoteNumber}</div>
     </div>
     <div class="total">
       <div class="total-amount">${formatCurrency(quote.total)}</div>
@@ -110,25 +164,25 @@ export async function GET(
   <div class="parties">
     <div>
       <div class="party-label">Van</div>
-      <div class="party-name">${profile?.company_name || ''}</div>
+      <div class="party-name">${eCompanyName}</div>
       <div class="party-info">
-        ${profile?.company_address ? `${profile.company_address}<br>` : ''}
-        ${profile?.company_postal || ''} ${profile?.company_city || ''}<br>
-        ${profile?.company_email ? `${profile.company_email}<br>` : ''}
-        ${profile?.company_phone ? `${profile.company_phone}<br>` : ''}
-        ${profile?.company_kvk ? `KvK: ${profile.company_kvk}<br>` : ''}
-        ${profile?.company_btw ? `BTW: ${profile.company_btw}` : ''}
+        ${profile?.company_address ? `${eCompanyAddress}<br>` : ''}
+        ${eCompanyPostal} ${eCompanyCity}<br>
+        ${profile?.company_email ? `${eCompanyEmail}<br>` : ''}
+        ${profile?.company_phone ? `${eCompanyPhone}<br>` : ''}
+        ${profile?.company_kvk ? `KvK: ${eCompanyKvk}<br>` : ''}
+        ${profile?.company_btw ? `BTW: ${eCompanyBtw}` : ''}
       </div>
     </div>
     ${quote.clients ? `
     <div>
       <div class="party-label">Aan</div>
-      ${quote.clients.company ? `<div class="party-name">${quote.clients.company}</div>` : ''}
+      ${quote.clients.company ? `<div class="party-name">${eClientCompany}</div>` : ''}
       <div class="party-info">
-        ${quote.clients.name}<br>
-        ${quote.clients.email}<br>
-        ${quote.clients.address ? `${quote.clients.address}<br>` : ''}
-        ${quote.clients.postal || ''} ${quote.clients.city || ''}
+        ${eClientName}<br>
+        ${eClientEmail}<br>
+        ${quote.clients.address ? `${eClientAddress}<br>` : ''}
+        ${eClientPostal} ${eClientCity}
       </div>
     </div>` : ''}
   </div>
@@ -138,7 +192,7 @@ export async function GET(
     ${quote.valid_until ? `<span><strong>Geldig tot:</strong> ${formatDate(quote.valid_until)}</span>` : ''}
   </div>
 
-  ${quote.intro ? `<div class="intro">${quote.intro}</div>` : ''}
+  ${quote.intro ? `<div class="intro">${eIntro}</div>` : ''}
 
   <table>
     <thead>
@@ -162,13 +216,13 @@ export async function GET(
     <div class="totals-row total"><span>Totaal</span><span>${formatCurrency(quote.total)}</span></div>
   </div>
 
-  ${quote.footer ? `<div class="footer-text">${quote.footer}</div>` : ''}
+  ${quote.footer ? `<div class="footer-text">${eFooter}</div>` : ''}
 
   ${quote.signed_at ? `
   <div class="signature-section">
     <div class="signature-label">Digitale handtekening</div>
     ${quote.signature_url ? `<img src="${quote.signature_url}" alt="Handtekening" class="signature-img">` : ''}
-    <p style="font-size:13px;color:#64748b;margin-top:8px;">Ondertekend door <strong>${quote.signed_name}</strong> op ${formatDate(quote.signed_at)}</p>
+    <p style="font-size:13px;color:#64748b;margin-top:8px;">Ondertekend door <strong>${eSignedName}</strong> op ${formatDate(quote.signed_at)}</p>
   </div>` : ''}
 </div>
 <script>window.onload = () => window.print();</script>
@@ -178,7 +232,7 @@ export async function GET(
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Content-Disposition': `inline; filename="offerte-${quote.quote_number}.html"`,
+      'Content-Disposition': `inline; filename="offerte-${eQuoteNumber}.html"`,
     },
   })
 }

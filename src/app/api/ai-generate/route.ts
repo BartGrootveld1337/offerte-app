@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
+import { rateLimit, getIp } from '@/lib/rate-limit'
 
 function getOpenAIKey(): string {
   try {
@@ -14,9 +17,36 @@ function getOpenAIKey(): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit: max 10 requests per IP per hour
+  if (!rateLimit(getIp(req), 10, 3_600_000)) {
+    return NextResponse.json({ error: 'Te veel verzoeken. Probeer later opnieuw.' }, { status: 429 })
+  }
+
+  // Authentication check
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => {},
+      },
+    }
+  )
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Niet geautoriseerd' }, { status: 401 })
+  }
+
   const { description } = await req.json()
   if (!description) {
     return NextResponse.json({ error: 'Beschrijving is verplicht' }, { status: 400 })
+  }
+
+  // Body size check: max 2000 chars
+  if (typeof description === 'string' && description.length > 2000) {
+    return NextResponse.json({ error: 'Beschrijving mag maximaal 2000 tekens bevatten' }, { status: 400 })
   }
 
   const apiKey = getOpenAIKey()

@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { rateLimit, getIp } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  // Rate limit: max 30 sign attempts per IP per 15 minutes
+  if (!rateLimit(getIp(req), 30, 900_000)) {
+    return NextResponse.json({ error: 'Te veel verzoeken. Probeer later opnieuw.' }, { status: 429 })
+  }
+
   const { token, signedName, signatureData, action, declinedReason } = await req.json()
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown'
+
+  // Signature size check: max 500KB (500_000 chars)
+  if (signatureData && typeof signatureData === 'string' && signatureData.length > 500_000) {
+    return NextResponse.json({ error: 'Handtekening te groot' }, { status: 400 })
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

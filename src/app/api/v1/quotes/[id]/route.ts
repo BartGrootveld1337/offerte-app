@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { authenticateApiKey } from '@/lib/api-auth'
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
 function getSupabase() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,6 +17,13 @@ function getSupabase() {
 }
 
 type Params = Promise<{ id: string }>
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: CORS_HEADERS,
+  })
+}
 
 export async function GET(req: NextRequest, { params }: { params: Params }) {
   const auth = await authenticateApiKey(req.headers.get('authorization'))
@@ -38,9 +51,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
   const body = await req.json()
   const supabase = getSupabase()
 
+  // Whitelist allowed update fields — prevent overwriting sign/audit fields
+  const allowed = ['title', 'client_id', 'intro', 'footer', 'valid_until', 'notes', 'subtotal', 'vat_amount', 'total', 'discount_percent', 'discount_amount', 'status']
+  const safeBody: Record<string, unknown> = {}
+  for (const key of allowed) {
+    if (body[key] !== undefined) safeBody[key] = body[key]
+  }
+
+  // Restrict status to safe values — signed/declined must go through the sign flow
+  const ALLOWED_STATUSES = ['draft', 'sent', 'expired']
+  if (safeBody.status !== undefined && !ALLOWED_STATUSES.includes(safeBody.status as string)) {
+    return NextResponse.json({ error: 'Ongeldige status waarde' }, { status: 400 })
+  }
+
   const { data, error } = await supabase
     .from('quotes')
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update({ ...safeBody, updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('user_id', auth.userId)
     .select()
