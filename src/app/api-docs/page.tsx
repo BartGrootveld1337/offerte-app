@@ -9,7 +9,7 @@ export default async function ApiDocsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yourapp.com'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://offerte.vrijdag.ai'
 
   return (
     <div className="min-h-screen bg-slate-50">
