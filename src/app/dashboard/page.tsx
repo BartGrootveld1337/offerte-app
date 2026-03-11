@@ -11,26 +11,25 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: quotes }, { data: openedQuoteIds }] = await Promise.all([
-    supabase
-      .from('quotes')
-      .select('*, clients(*)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false }),
-    supabase
+  const { data: quotes } = await supabase
+    .from('quotes')
+    .select('*, clients(*)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  const allQuotes = (quotes as Quote[]) || []
+  const quoteIds = allQuotes.map(q => q.id)
+
+  let openedIds = new Set<string>()
+  if (quoteIds.length > 0) {
+    const { data: openedEvents } = await supabase
       .from('quote_events')
       .select('quote_id')
       .eq('event_type', 'opened')
-      .in('quote_id',
-        // Subquery trick: we'll just pass all and filter client-side
-        supabase.from('quotes').select('id').eq('user_id', user.id) as unknown as string[]
-      ),
-  ])
-
-  const allQuotes = (quotes as Quote[]) || []
-
-  // Get quote IDs that have been opened
-  const openedIds = new Set((openedQuoteIds || []).map((e: { quote_id: string }) => e.quote_id))
+      .in('quote_id', quoteIds)
+    
+    openedIds = new Set((openedEvents || []).map((e: { quote_id: string }) => e.quote_id))
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

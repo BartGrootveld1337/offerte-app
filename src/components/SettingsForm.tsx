@@ -12,6 +12,27 @@ interface SettingsFormProps {
   userId: string
 }
 
+interface FieldProps {
+  label: string
+  name: string
+  type?: string
+  half?: boolean
+  value: string | number
+  onChange: (value: string | number) => void
+}
+
+const Field = ({ label, name, type = 'text', half = false, value, onChange }: FieldProps) => (
+  <div className={half ? 'col-span-1' : 'col-span-2'}>
+    <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
+    <input
+      type={type}
+      value={String(value)}
+      onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
+      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  </div>
+)
+
 export default function SettingsForm({ profile, clients: initialClients, userId }: SettingsFormProps) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
@@ -65,34 +86,22 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
     toast.success('Klant verwijderd')
   }
 
-  const Field = ({ label, name, type = 'text', half = false }: { label: string; name: keyof typeof form; type?: string; half?: boolean }) => (
-    <div className={half ? 'col-span-1' : 'col-span-2'}>
-      <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
-      <input
-        type={type}
-        value={String(form[name])}
-        onChange={e => setForm({ ...form, [name]: type === 'number' ? Number(e.target.value) : e.target.value })}
-        className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-    </div>
-  )
-
   return (
     <div className="space-y-6">
       {/* Company info */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
         <h2 className="text-lg font-bold text-slate-900 mb-4">Bedrijfsgegevens</h2>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Bedrijfsnaam" name="company_name" />
-          <Field label="Adres" name="company_address" />
-          <Field label="Postcode" name="company_postal" half />
-          <Field label="Stad" name="company_city" half />
-          <Field label="E-mail" name="company_email" type="email" half />
-          <Field label="Telefoon" name="company_phone" half />
-          <Field label="Website" name="company_website" half />
-          <Field label="KVK-nummer" name="company_kvk" half />
-          <Field label="BTW-nummer" name="company_btw" half />
-          <Field label="IBAN" name="company_iban" half />
+          <Field label="Bedrijfsnaam" name="company_name" value={form.company_name} onChange={(val) => setForm({ ...form, company_name: val as string })} />
+          <Field label="Adres" name="company_address" value={form.company_address} onChange={(val) => setForm({ ...form, company_address: val as string })} />
+          <Field label="Postcode" name="company_postal" half value={form.company_postal} onChange={(val) => setForm({ ...form, company_postal: val as string })} />
+          <Field label="Stad" name="company_city" half value={form.company_city} onChange={(val) => setForm({ ...form, company_city: val as string })} />
+          <Field label="E-mail" name="company_email" type="email" half value={form.company_email} onChange={(val) => setForm({ ...form, company_email: val as string })} />
+          <Field label="Telefoon" name="company_phone" half value={form.company_phone} onChange={(val) => setForm({ ...form, company_phone: val as string })} />
+          <Field label="Website" name="company_website" half value={form.company_website} onChange={(val) => setForm({ ...form, company_website: val as string })} />
+          <Field label="KVK-nummer" name="company_kvk" half value={form.company_kvk} onChange={(val) => setForm({ ...form, company_kvk: val as string })} />
+          <Field label="BTW-nummer" name="company_btw" half value={form.company_btw} onChange={(val) => setForm({ ...form, company_btw: val as string })} />
+          <Field label="IBAN" name="company_iban" half value={form.company_iban} onChange={(val) => setForm({ ...form, company_iban: val as string })} />
         </div>
       </div>
 
@@ -100,8 +109,8 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
         <h2 className="text-lg font-bold text-slate-900 mb-4">Standaardinstellingen</h2>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Standaard betalingstermijn (dagen)" name="default_payment_days" type="number" half />
-          <Field label="Standaard BTW-tarief (%)" name="default_vat_rate" type="number" half />
+          <Field label="Standaard betalingstermijn (dagen)" name="default_payment_days" type="number" half value={form.default_payment_days} onChange={(val) => setForm({ ...form, default_payment_days: val as number })} />
+          <Field label="Standaard BTW-tarief (%)" name="default_vat_rate" type="number" half value={form.default_vat_rate} onChange={(val) => setForm({ ...form, default_vat_rate: val as number })} />
         </div>
         <div className="space-y-4">
           <div>
