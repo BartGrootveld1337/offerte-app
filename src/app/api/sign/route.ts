@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { rateLimit, getIp } from '@/lib/rate-limit'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export async function POST(req: NextRequest) {
   // Rate limit: max 30 sign attempts per IP per 15 minutes
   if (!rateLimit(getIp(req), 30, 900_000)) {
@@ -9,6 +12,21 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, signedName, signatureData, action, declinedReason } = await req.json()
+
+  // Validate token format (UUID)
+  if (!token || !UUID_REGEX.test(token)) {
+    return NextResponse.json({ error: 'Ongeldig token formaat' }, { status: 400 })
+  }
+
+  // Validate signedName length
+  if (signedName && typeof signedName === 'string' && signedName.length > 200) {
+    return NextResponse.json({ error: 'Naam te lang (max 200 tekens)' }, { status: 400 })
+  }
+
+  // Validate declinedReason length
+  if (declinedReason && typeof declinedReason === 'string' && declinedReason.length > 1000) {
+    return NextResponse.json({ error: 'Reden te lang (max 1000 tekens)' }, { status: 400 })
+  }
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown'
 
   // Signature size check: max 500KB (500_000 chars)

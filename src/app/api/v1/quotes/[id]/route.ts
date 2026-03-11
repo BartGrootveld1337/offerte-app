@@ -26,7 +26,8 @@ export async function OPTIONS() {
 }
 
 export async function GET(req: NextRequest, { params }: { params: Params }) {
-  const auth = await authenticateApiKey(req.headers.get('authorization'))
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const auth = await authenticateApiKey(req.headers.get('authorization'), ip)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
@@ -44,7 +45,8 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Params }) {
-  const auth = await authenticateApiKey(req.headers.get('authorization'))
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const auth = await authenticateApiKey(req.headers.get('authorization'), ip)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
@@ -77,7 +79,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Params }) {
-  const auth = await authenticateApiKey(req.headers.get('authorization'))
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const auth = await authenticateApiKey(req.headers.get('authorization'), ip)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
@@ -89,6 +92,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Params }) {
     .eq('id', id)
     .eq('user_id', auth.userId)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) console.error('[v1/quotes/id]', error.message)
+  return NextResponse.json({ error: 'Er is een serverfout opgetreden' }, { status: 500 })
   return NextResponse.json({ success: true })
 }

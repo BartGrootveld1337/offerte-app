@@ -24,7 +24,8 @@ export async function OPTIONS() {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await authenticateApiKey(req.headers.get('authorization'))
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const auth = await authenticateApiKey(req.headers.get('authorization'), ip)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const supabase = getSupabase()
@@ -34,12 +35,16 @@ export async function GET(req: NextRequest) {
     .eq('user_id', auth.userId)
     .order('created_at', { ascending: false })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[v1/quotes GET]', error.message)
+    return NextResponse.json({ error: 'Er is een serverfout opgetreden' }, { status: 500 })
+  }
   return NextResponse.json({ data })
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await authenticateApiKey(req.headers.get('authorization'))
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const auth = await authenticateApiKey(req.headers.get('authorization'), ip)
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
@@ -58,6 +63,9 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[v1/quotes POST]', error.message)
+    return NextResponse.json({ error: 'Er is een serverfout opgetreden' }, { status: 500 })
+  }
   return NextResponse.json({ data }, { status: 201 })
 }

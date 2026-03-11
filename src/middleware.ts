@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
   // Add CORS headers for v1 API
   if (req.nextUrl.pathname.startsWith('/api/v1/')) {
     const res = NextResponse.next()

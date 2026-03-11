@@ -50,6 +50,12 @@ export async function POST(req: NextRequest) {
     companyWebsite,
   } = await req.json()
 
+  // Validate email format
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!clientEmail || !EMAIL_REGEX.test(String(clientEmail))) {
+    return NextResponse.json({ error: 'Ongeldig e-mailadres' }, { status: 400 })
+  }
+
   // Verify ownership: the authenticated user must own the quote
   const { data: quoteRecord } = await supabase.from('quotes').select('id,user_id').eq('id', quoteId).single()
   if (!quoteRecord || quoteRecord.user_id !== user.id) {
@@ -74,6 +80,7 @@ export async function POST(req: NextRequest) {
   const safeSignUrlHref = encodeURI(String(signUrl || ''))
   const safeCompanyEmailHref = encodeURI(String(companyEmail || ''))
   const safeCompanyWebsiteHref = encodeURI(String(companyWebsite || ''))
+  const safeTotal = escapeHtml(String(total || ''))
 
   const html = `<!DOCTYPE html>
 <html lang="nl">
@@ -121,7 +128,7 @@ export async function POST(req: NextRequest) {
                     </tr>
                     <tr>
                       <td style="color:#a0a0b0;font-size:14px;padding:8px 0 6px;">Totaalbedrag (incl. BTW)</td>
-                      <td align="right" style="font-size:26px;font-weight:800;padding:8px 0 6px;background:linear-gradient(135deg,#6366f1,#a855f7,#22d3ee);-webkit-background-clip:text;color:#818cf8;">${total}</td>
+                      <td align="right" style="font-size:26px;font-weight:800;padding:8px 0 6px;background:linear-gradient(135deg,#6366f1,#a855f7,#22d3ee);-webkit-background-clip:text;color:#818cf8;">${safeTotal}</td>
                     </tr>
                     ${formattedValidUntil ? `<tr>
                       <td style="color:#a0a0b0;font-size:14px;padding:6px 0 0;">Geldig tot</td>
@@ -178,7 +185,7 @@ export async function POST(req: NextRequest) {
     await resend.emails.send({
       from: `${safeCompanyName} <offerte@vrijdag.ai>`,
       to: clientEmail,
-      subject: `Offerte ${safeQuoteNumber} — ${total} | ${safeCompanyName}`,
+      subject: `Offerte ${safeQuoteNumber} — ${safeTotal} | ${safeCompanyName}`,
       html,
     })
 

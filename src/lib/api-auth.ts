@@ -1,12 +1,21 @@
 import { createServerClient } from '@supabase/ssr'
 import { createHash } from 'crypto'
+import { rateLimit } from './rate-limit'
 
 export function hashApiKey(key: string): string {
   return createHash('sha256').update(key).digest('hex')
 }
 
-export async function authenticateApiKey(authHeader: string | null): Promise<{ userId: string } | null> {
+export async function authenticateApiKey(
+  authHeader: string | null,
+  ip = 'unknown'
+): Promise<{ userId: string } | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null
+  }
+
+  // Rate limit: max 60 auth attempts per IP per minute (defense against brute-force)
+  if (!rateLimit(`api-auth:${ip}`, 60, 60_000)) {
     return null
   }
 
