@@ -1,0 +1,237 @@
+name: 🔐 Security Audit (Claude Code Security)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/**/*.js'
+      - 'supabase/migrations/**'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  security-audit:
+    name: Claude Code Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --name-only origin/${{ github.base_ref }}...HEAD \
+              | grep -E '\.(ts|tsx|js)$' \
+              | grep -v 'node_modules\|\.next\|\.test\.' \
+              | head -30 > /tmp/changed_files.txt
+          else
+            git diff --name-only HEAD~1 HEAD \
+              | grep -E '\.(ts|tsx|js)$' \
+              | grep -v 'node_modules\|\.next\|\.test\.' \
+              | head -30 > /tmp/changed_files.txt
+          fi
+          echo "Changed files:"
+          cat /tmp/changed_files.txt
+          echo "count=$(wc -l < /tmp/changed_files.txt)" >> $GITHUB_OUTPUT
+
+      - name: Skip if no relevant files changed
+        if: steps.changed.outputs.count == '0'
+        run: |
+          echo "Geen relevante bestanden gewijzigd. Audit overgeslagen."
+          exit 0
+
+      - name: Collect changed file contents
+        run: |
+          echo "Collecting file contents for audit..."
+          > /tmp/audit_input.txt
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              echo "=== FILE: $file ===" >> /tmp/audit_input.txt
+              cat "$file" >> /tmp/audit_input.txt
+              echo -e "\n" >> /tmp/audit_input.txt
+            fi
+          done < /tmp/changed_files.txt
+          # Limit total size to ~80KB to stay within context
+          truncate -s 80000 /tmp/audit_input.txt
+          echo "Audit input size: $(wc -c < /tmp/audit_input.txt) bytes"
+
+      - name: Run security audit via Claude API
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          AUDIT_INPUT=$(cat /tmp/audit_input.txt | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")
+          CHANGED_FILES=$(cat /tmp/changed_files.txt | tr '\n' ', ')
+
+          python3 << 'PYEOF'
+          import os, json, urllib.request
+
+          api_key = os.environ['ANTHROPIC_API_KEY']
+          audit_input = open('/tmp/audit_input.txt').read()
+          changed_files = open('/tmp/changed_files.txt').read().strip()
+
+          system_prompt = """Je bent een senior security engineer die code beoordeelt in de stijl van Claude Code Security.
+          
+          Geïnspireerd op Anthropic's aanpak: lees en redeneer over de code zoals een menselijke security researcher — volg dataflows, traceer business logic, begrijp hoe componenten met elkaar interacteren.
+          
+          SECURITY AUDIT CHECKLIST:
+          1. Authenticatie & Autorisatie: auth checks, ownership checks, middleware, status-transitions server-side
+          2. Input Validatie: UUID-validatie, field whitelisting, lengte-limieten, enum-validatie, email-validatie
+          3. File Uploads: extensie whitelist (geen SVG), MIME type, magic bytes, grootte-limiet
+          4. HTML/XSS: escapeHtml op user-data in HTML templates, geen dangerouslySetInnerHTML zonder sanitatie, CSP
+          5. Informatie-lekken: geen error.message naar client, geen interne paden in responses
+          6. Rate Limiting: op dure operaties (AI, email, sign)
+          7. Business Logic: status machines server-side, immutable states, idempotente operaties
+          8. Security Headers: X-Frame-Options, X-Content-Type-Options, HSTS, CSP, Referrer-Policy
+          9. API Design: CORS, field whitelisting, nooit { ...body } direct inserten
+          10. Dependencies: geen vulnerabilities, geen SVG uploads bij publieke URLs
+          
+          BEVINDING FORMAT:
+          ### CVE-XXX · [Korte naam]
+          **Severity:** CRITICAL | HIGH | MEDIUM | LOW
+          **Confidence:** HIGH | MEDIUM | LOW
+          [Beschrijving + code snippet]
+          **Fix:** [Concrete patch]
+          
+          SEVERITY MATRIX:
+          - CRITICAL: Direct misbruikbaar zonder auth of door elke user
+          - HIGH: Misbruikbaar door authenticated users, data/geld schade
+          - MEDIUM: Info-lekken, business rule bypass, deployment risico
+          - LOW: Defense-in-depth, best practices, theoretische vectors
+          
+          Rapporteer ALLEEN echte bevindingen. Als de code schoon is, zeg dat dan duidelijk.
+          Wees beknopt maar volledig. Max 10 bevindingen, gefocust op wat er echt toe doet."""
+
+          user_message = f"""Voer een security audit uit op de volgende gewijzigde bestanden:
+
+          Gewijzigde bestanden: {changed_files}
+
+          === CODE ===
+          {audit_input[:75000]}
+          ============
+
+          Analyseer de code grondig en rapporteer bevindingen in het gespecificeerde format."""
+
+          payload = {
+              "model": "claude-opus-4-6",
+              "max_tokens": 4096,
+              "system": system_prompt,
+              "messages": [{"role": "user", "content": user_message}]
+          }
+
+          req = urllib.request.Request(
+              'https://api.anthropic.com/v1/messages',
+              data=json.dumps(payload).encode(),
+              headers={
+                  'x-api-key': api_key,
+                  'anthropic-version': '2023-06-01',
+                  'content-type': 'application/json'
+              },
+              method='POST'
+          )
+
+          with urllib.request.urlopen(req, timeout=120) as resp:
+              result = json.loads(resp.read())
+              audit_result = result['content'][0]['text']
+
+          with open('/tmp/audit_result.txt', 'w') as f:
+              f.write(audit_result)
+
+          print("Audit voltooid!")
+          print(audit_result[:500] + "...")
+          PYEOF
+
+      - name: Post results as PR comment
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          AUDIT_RESULT=$(cat /tmp/audit_result.txt)
+          CHANGED_FILES=$(cat /tmp/changed_files.txt | sed 's/^/- `/' | sed 's/$/`/' | tr '\n' '\n')
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+
+          COMMENT=$(cat << EOF
+          ## 🔐 Claude Code Security Audit
+
+          **Geanalyseerde bestanden:**
+          $(cat /tmp/changed_files.txt | sed 's/^/- \`/' | sed 's/$/\`/')
+
+          **Tijdstip:** $TIMESTAMP
+
+          ---
+
+          $AUDIT_RESULT
+
+          ---
+          <sub>🤖 Automatisch gegenereerd door Claude Code Security · [Methodologie](https://github.com/$REPO/blob/main/memory/security-audit-methodology.md)</sub>
+          EOF
+          )
+
+          python3 << PYEOF
+          import os, json, urllib.request
+
+          token = os.environ['GITHUB_TOKEN']
+          repo = os.environ['REPO']
+          pr_number = os.environ['PR_NUMBER']
+          comment = open('/tmp/audit_result.txt').read()
+          
+          # Build full comment
+          changed = open('/tmp/changed_files.txt').read().strip().split('\n')
+          files_list = '\n'.join([f'- \`{f}\`' for f in changed if f])
+          
+          full_comment = f"""## 🔐 Claude Code Security Audit
+
+          **Geanalyseerde bestanden:**
+          {files_list}
+
+          ---
+
+          {comment}
+
+          ---
+          <sub>🤖 Automatisch gegenereerd door Claude Code Security</sub>"""
+
+          payload = json.dumps({'body': full_comment}).encode()
+          
+          url = f'https://api.github.com/repos/{repo}/issues/{pr_number}/comments'
+          req = urllib.request.Request(url, data=payload, headers={
+              'Authorization': f'Bearer {token}',
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json',
+              'X-GitHub-Api-Version': '2022-11-28'
+          }, method='POST')
+          
+          with urllib.request.urlopen(req, timeout=30) as resp:
+              result = json.loads(resp.read())
+              print(f"Comment geplaatst: {result['html_url']}")
+          PYEOF
+
+      - name: Save audit report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report
+          path: /tmp/audit_result.txt
+          retention-days: 30
+
+      - name: Fail on CRITICAL findings
+        run: |
+          if grep -q "Severity.*CRITICAL\|CRITICAL.*Severity" /tmp/audit_result.txt; then
+            echo "🔴 KRITIEKE bevindingen gevonden! Zie het audit rapport."
+            exit 1
+          fi
+          echo "✅ Geen kritieke bevindingen."
