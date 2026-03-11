@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { formatCurrency, formatDate, statusLabel } from '@/lib/utils'
-import { Plus, FileText, TrendingUp, Clock, CheckCircle, Eye, Search, Filter, PercentCircle } from 'lucide-react'
+import { Plus, FileText, TrendingUp, Clock, CheckCircle, Eye, Search, Filter, PercentCircle, BarChart3, Timer } from 'lucide-react'
 import type { Quote, QuoteStatus } from '@/types'
 
 interface Props {
@@ -41,8 +41,21 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
   const countSigned = quotes.filter(q => q.status === 'signed').length
   const countDeclined = quotes.filter(q => q.status === 'declined').length
 
-  const decidedCount = countSigned + countDeclined
+  const countExpired = quotes.filter(q => q.status === 'expired').length
+  const decidedCount = countSigned + countDeclined + countExpired
   const conversionRate = decidedCount > 0 ? Math.round((countSigned / decidedCount) * 100) : 0
+
+  // Average quote value (signed)
+  const signedQuotes = quotes.filter(q => q.status === 'signed')
+  const avgSignedValue = signedQuotes.length > 0 ? totalSigned / signedQuotes.length : 0
+
+  // Average signing time (signed_at - sent_at in days)
+  const signingTimes = signedQuotes
+    .filter(q => q.signed_at && q.sent_at)
+    .map(q => (new Date(q.signed_at!).getTime() - new Date(q.sent_at!).getTime()) / (1000 * 60 * 60 * 24))
+  const avgSigningDays = signingTimes.length > 0
+    ? Math.round(signingTimes.reduce((a, b) => a + b, 0) / signingTimes.length)
+    : 0
 
   const filtered = quotes.filter(q => {
     const matchSearch = search
@@ -83,7 +96,7 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
         <StatCard
           label="Openstaand"
           value={formatCurrency(totalOpen)}
@@ -125,6 +138,26 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
           iconBg="rgba(99,102,241,0.15)"
           subtitle={`${countSigned} van ${decidedCount} besloten`}
         />
+        {avgSignedValue > 0 && (
+          <StatCard
+            label="Gem. offertewaarde"
+            value={formatCurrency(avgSignedValue)}
+            icon={BarChart3}
+            gradient="linear-gradient(135deg, rgba(34,211,238,0.12), rgba(34,211,238,0.03))"
+            iconColor="#22d3ee"
+            iconBg="rgba(34,211,238,0.12)"
+          />
+        )}
+        {avgSigningDays > 0 && (
+          <StatCard
+            label="Gem. ondertekentijd"
+            value={`${avgSigningDays} dag${avgSigningDays !== 1 ? 'en' : ''}`}
+            icon={Timer}
+            gradient="linear-gradient(135deg, rgba(168,85,247,0.15), rgba(168,85,247,0.05))"
+            iconColor="#c084fc"
+            iconBg="rgba(168,85,247,0.15)"
+          />
+        )}
       </div>
 
       {/* Quotes table */}
@@ -202,15 +235,52 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
 
         {quotes.length === 0 ? (
           <div className="p-12 text-center">
-            <FileText size={40} className="mx-auto mb-3" style={{ color: '#2a2a3a' }} />
-            <p className="font-medium" style={{ color: '#6b6b7a' }}>Nog geen offertes</p>
+            <div className="flex justify-center mb-6">
+              <img src="/vrijdag_ai_logo.svg" alt="Vrijdag.AI" style={{ height: '48px', opacity: 0.4 }} />
+            </div>
+            <h3
+              className="text-xl font-bold mb-2"
+              style={{ color: '#ffffff', fontFamily: 'var(--font-oxanium), Oxanium, sans-serif' }}
+            >
+              Je eerste offerte staat te wachten
+            </h3>
+            <p className="mb-6" style={{ color: '#6b6b7a' }}>
+              Maak professionele offertes en stuur ze direct naar je klanten.
+            </p>
             <Link
               href="/quotes/new"
-              className="mt-3 inline-block text-sm font-medium"
-              style={{ color: '#6366f1' }}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm"
+              style={{
+                background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                color: 'white',
+                textDecoration: 'none',
+                boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
+              }}
             >
-              Maak je eerste offerte aan →
+              <Plus size={18} /> Maak je eerste offerte →
             </Link>
+            <div
+              className="mt-8 text-left rounded-xl p-4 inline-block min-w-64"
+              style={{ background: '#12121a', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: '#6b6b7a' }}>Snelstart</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <span style={{ color: '#22d3ee' }}>✅</span>
+                  <span style={{ color: '#a0a0b0' }}>Account aangemaakt</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span style={{ color: '#22d3ee' }}>✅</span>
+                  <span style={{ color: '#a0a0b0' }}>Profiel ingevuld</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span style={{ color: '#6b6b7a' }}>⬜</span>
+                  <Link href="/quotes/new" style={{ color: '#818cf8', textDecoration: 'none' }}>
+                    Eerste offerte maken
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">

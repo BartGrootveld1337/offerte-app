@@ -67,7 +67,6 @@ export interface Quote {
   signed_name?: string
   signed_ip?: string
   signature_url?: string
-  signed_reason?: string
   declined_reason?: string
   sent_at?: string
   pdf_url?: string

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { LayoutDashboard, Settings, LogOut, Plus, BookOpen, Users, ChevronDown, Key } from 'lucide-react'
+import { LayoutDashboard, Settings, LogOut, Plus, BookOpen, Users, ChevronDown, Key, Menu, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
 export default function Navbar() {
@@ -12,6 +12,7 @@ export default function Navbar() {
   const supabase = createClient()
   const [userEmail, setUserEmail] = useState<string>('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -110,8 +111,17 @@ export default function Navbar() {
         })}
       </div>
 
+      {/* Mobile hamburger */}
+      <button
+        className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl ml-4"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#a0a0b0', cursor: 'pointer' }}
+        onClick={() => setMobileMenuOpen(v => !v)}
+      >
+        {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+      </button>
+
       {/* Right: new quote + user menu */}
-      <div className="flex items-center gap-3 ml-4">
+      <div className="hidden md:flex items-center gap-3 ml-4">
         <Link
           href="/quotes/new"
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
@@ -196,6 +206,78 @@ export default function Navbar() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Mobile drawer */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+      <div
+        className="md:hidden fixed top-0 right-0 bottom-0 z-50 w-72 flex flex-col"
+        style={{
+          background: '#12121a',
+          borderLeft: '1px solid rgba(255,255,255,0.08)',
+          transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.25s ease',
+          padding: '24px 16px',
+        }}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <img src="/vrijdag_ai_logo.svg" alt="Vrijdag.AI" style={{ height: '28px' }} />
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: '#6b6b7a', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="space-y-1 flex-1">
+          {links.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+                style={{
+                  background: isActive ? 'rgba(99,102,241,0.15)' : 'transparent',
+                  color: isActive ? '#818cf8' : '#a0a0b0',
+                  border: isActive ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent',
+                  textDecoration: 'none',
+                }}
+              >
+                <Icon size={18} /> {label}
+              </Link>
+            )
+          })}
+          <Link
+            href="/quotes/new"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold mt-4"
+            style={{
+              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+              color: 'white',
+              textDecoration: 'none',
+            }}
+          >
+            <Plus size={18} /> Nieuwe offerte
+          </Link>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
+          <p className="text-xs mb-3 px-4" style={{ color: '#6b6b7a' }}>{userEmail}</p>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm w-full"
+            style={{ color: '#f87171', background: 'rgba(239,68,68,0.08)', border: 'none', cursor: 'pointer' }}
+          >
+            <LogOut size={16} /> Uitloggen
+          </button>
         </div>
       </div>
     </nav>

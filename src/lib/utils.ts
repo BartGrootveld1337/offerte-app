@@ -1,3 +1,5 @@
+import type React from 'react'
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('nl-NL', {
     style: 'currency',
@@ -76,15 +78,15 @@ export function statusLabel(status: string): string {
   return labels[status] || status
 }
 
-export function statusColor(status: string): string {
-  const colors: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-700',
-    sent: 'bg-blue-100 text-blue-700',
-    signed: 'bg-green-100 text-green-700',
-    expired: 'bg-orange-100 text-orange-700',
-    declined: 'bg-red-100 text-red-700',
+export function statusColor(status: string): React.CSSProperties {
+  switch (status) {
+    case 'sent': return { background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }
+    case 'signed': return { background: 'rgba(34,211,238,0.1)', color: '#22d3ee', border: '1px solid rgba(34,211,238,0.3)' }
+    case 'draft': return { background: 'rgba(107,107,122,0.15)', color: '#a0a0b0', border: '1px solid rgba(107,107,122,0.25)' }
+    case 'expired': return { background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+    case 'declined': return { background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+    default: return { background: 'rgba(107,107,122,0.15)', color: '#a0a0b0' }
   }
-  return colors[status] || 'bg-gray-100 text-gray-700'
 }
 
 export function eventLabel(eventType: string): string {
@@ -97,12 +99,12 @@ export function eventLabel(eventType: string): string {
   return labels[eventType] || eventType
 }
 
-export function eventColor(eventType: string): string {
-  const colors: Record<string, string> = {
-    opened: 'bg-blue-100 text-blue-700',
-    signed: 'bg-green-100 text-green-700',
-    declined: 'bg-red-100 text-red-700',
-    sent: 'bg-purple-100 text-purple-700',
+export function eventColor(eventType: string): React.CSSProperties {
+  switch (eventType) {
+    case 'opened': return { background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }
+    case 'signed': return { background: 'rgba(34,211,238,0.1)', color: '#22d3ee', border: '1px solid rgba(34,211,238,0.3)' }
+    case 'declined': return { background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+    case 'sent': return { background: 'rgba(168,85,247,0.1)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.3)' }
+    default: return { background: 'rgba(107,107,122,0.15)', color: '#a0a0b0' }
   }
-  return colors[eventType] || 'bg-gray-100 text-gray-700'
 }

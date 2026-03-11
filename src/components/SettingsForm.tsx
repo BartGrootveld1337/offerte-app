@@ -1,15 +1,51 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Profile, Client } from '@/types'
-import { Save, Plus, Trash2 } from 'lucide-react'
+import { Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface SettingsFormProps {
   profile: Profile | null
   clients: Client[]
   userId: string
+}
+
+const inputStyle: React.CSSProperties = {
+  background: '#12121a',
+  border: '1px solid rgba(255,255,255,0.08)',
+  color: '#ffffff',
+  borderRadius: '10px',
+  padding: '10px 14px',
+  width: '100%',
+  outline: 'none',
+  fontSize: '14px',
+}
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '13px',
+  fontWeight: 500,
+  color: '#a0a0b0',
+  marginBottom: '6px',
+}
+
+const cardStyle: React.CSSProperties = {
+  background: '#1e1e2a',
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: '16px',
+  padding: '24px',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+}
+
+function focusInput(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  e.target.style.boxShadow = '0 0 0 2px rgba(99,102,241,0.4)'
+  e.target.style.borderColor = 'rgba(99,102,241,0.5)'
+}
+function blurInput(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  e.target.style.boxShadow = 'none'
+  e.target.style.borderColor = 'rgba(255,255,255,0.08)'
 }
 
 interface FieldProps {
@@ -19,19 +55,26 @@ interface FieldProps {
   half?: boolean
   value: string | number
   onChange: (value: string | number) => void
+  placeholder?: string
 }
 
-const Field = ({ label, name, type = 'text', half = false, value, onChange }: FieldProps) => (
-  <div className={half ? 'col-span-1' : 'col-span-2'}>
-    <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
-    <input
-      type={type}
-      value={String(value)}
-      onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
-      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  </div>
-)
+function Field({ label, name, type = 'text', half = false, value, onChange, placeholder }: FieldProps) {
+  return (
+    <div className={half ? 'col-span-1' : 'col-span-2'}>
+      <label style={labelStyle}>{label}</label>
+      <input
+        id={name}
+        type={type}
+        value={String(value)}
+        onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
+        style={inputStyle}
+        onFocus={focusInput}
+        onBlur={blurInput}
+        placeholder={placeholder}
+      />
+    </div>
+  )
+}
 
 export default function SettingsForm({ profile, clients: initialClients, userId }: SettingsFormProps) {
   const supabase = createClient()
@@ -39,6 +82,9 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
   const [clients, setClients] = useState(initialClients)
   const [newClient, setNewClient] = useState({ name: '', company: '', email: '', phone: '' })
   const [addingClient, setAddingClient] = useState(false)
+  const [logoUrl, setLogoUrl] = useState(profile?.logo_url || '')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState({
     company_name: profile?.company_name || '',
@@ -57,6 +103,8 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
     default_footer: profile?.default_footer || '',
   })
 
+  const set = (k: keyof typeof form) => (val: string | number) => setForm(f => ({ ...f, [k]: val }))
+
   const handleSave = async () => {
     setSaving(true)
     const { error } = await supabase.from('profiles').upsert({ id: userId, ...form, updated_at: new Date().toISOString() })
@@ -66,6 +114,24 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
     } else {
       toast.success('Instellingen opgeslagen!')
     }
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch('/api/settings/logo', { method: 'POST', body: formData })
+    if (res.ok) {
+      const { url } = await res.json()
+      setLogoUrl(url)
+      toast.success('Logo geüpload!')
+    } else {
+      const err = await res.json()
+      toast.error('Upload mislukt: ' + (err.error || 'Onbekende fout'))
+    }
+    setUploadingLogo(false)
   }
 
   const handleAddClient = async () => {
@@ -86,49 +152,113 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
     toast.success('Klant verwijderd')
   }
 
+  const sectionTitle: React.CSSProperties = {
+    fontSize: '16px',
+    fontWeight: 700,
+    color: '#ffffff',
+    fontFamily: 'var(--font-oxanium), Oxanium, sans-serif',
+    marginBottom: '16px',
+  }
+
   return (
     <div className="space-y-6">
+      {/* Logo upload */}
+      <div style={cardStyle}>
+        <h2 style={sectionTitle}>Bedrijfslogo</h2>
+        <div className="flex items-center gap-6">
+          <div
+            className="w-24 h-24 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: '#12121a', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain rounded-xl p-2" />
+            ) : (
+              <ImageIcon size={32} style={{ color: '#6b6b7a' }} />
+            )}
+          </div>
+          <div>
+            <p className="text-sm mb-3" style={{ color: '#a0a0b0' }}>
+              Upload je bedrijfslogo. Wordt weergegeven op offertes en facturen.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingLogo}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+              style={{
+                background: 'rgba(99,102,241,0.15)',
+                border: '1px solid rgba(99,102,241,0.3)',
+                color: '#818cf8',
+                cursor: 'pointer',
+              }}
+            >
+              <Upload size={16} />
+              {uploadingLogo ? 'Uploaden...' : 'Logo uploaden'}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Company info */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Bedrijfsgegevens</h2>
+      <div style={cardStyle}>
+        <h2 style={sectionTitle}>Bedrijfsgegevens</h2>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Bedrijfsnaam" name="company_name" value={form.company_name} onChange={(val) => setForm({ ...form, company_name: val as string })} />
-          <Field label="Adres" name="company_address" value={form.company_address} onChange={(val) => setForm({ ...form, company_address: val as string })} />
-          <Field label="Postcode" name="company_postal" half value={form.company_postal} onChange={(val) => setForm({ ...form, company_postal: val as string })} />
-          <Field label="Stad" name="company_city" half value={form.company_city} onChange={(val) => setForm({ ...form, company_city: val as string })} />
-          <Field label="E-mail" name="company_email" type="email" half value={form.company_email} onChange={(val) => setForm({ ...form, company_email: val as string })} />
-          <Field label="Telefoon" name="company_phone" half value={form.company_phone} onChange={(val) => setForm({ ...form, company_phone: val as string })} />
-          <Field label="Website" name="company_website" half value={form.company_website} onChange={(val) => setForm({ ...form, company_website: val as string })} />
-          <Field label="KVK-nummer" name="company_kvk" half value={form.company_kvk} onChange={(val) => setForm({ ...form, company_kvk: val as string })} />
-          <Field label="BTW-nummer" name="company_btw" half value={form.company_btw} onChange={(val) => setForm({ ...form, company_btw: val as string })} />
-          <Field label="IBAN" name="company_iban" half value={form.company_iban} onChange={(val) => setForm({ ...form, company_iban: val as string })} />
+          <Field label="Bedrijfsnaam *" name="company_name" value={form.company_name} onChange={set('company_name')} placeholder="Vrijdag.AI" />
+          <Field label="Adres" name="company_address" value={form.company_address} onChange={set('company_address')} placeholder="Straat 1" />
+          <Field label="Postcode" name="company_postal" half value={form.company_postal} onChange={set('company_postal')} placeholder="1234 AB" />
+          <Field label="Stad" name="company_city" half value={form.company_city} onChange={set('company_city')} placeholder="Amsterdam" />
+          <Field label="KvK nummer" name="company_kvk" half value={form.company_kvk} onChange={set('company_kvk')} placeholder="12345678" />
+          <Field label="BTW nummer" name="company_btw" half value={form.company_btw} onChange={set('company_btw')} placeholder="NL123456789B01" />
+          <Field label="IBAN" name="company_iban" value={form.company_iban} onChange={set('company_iban')} placeholder="NL91 ABNA 0417 1643 00" />
+        </div>
+      </div>
+
+      {/* Contact */}
+      <div style={cardStyle}>
+        <h2 style={sectionTitle}>Contactgegevens</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="E-mailadres" name="company_email" type="email" half value={form.company_email} onChange={set('company_email')} placeholder="info@vrijdag.ai" />
+          <Field label="Telefoonnummer" name="company_phone" half value={form.company_phone} onChange={set('company_phone')} placeholder="+31 6 12345678" />
+          <Field label="Website" name="company_website" value={form.company_website} onChange={set('company_website')} placeholder="https://vrijdag.ai" />
         </div>
       </div>
 
       {/* Defaults */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Standaardinstellingen</h2>
+      <div style={cardStyle}>
+        <h2 style={sectionTitle}>Standaardinstellingen</h2>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Standaard betalingstermijn (dagen)" name="default_payment_days" type="number" half value={form.default_payment_days} onChange={(val) => setForm({ ...form, default_payment_days: val as number })} />
-          <Field label="Standaard BTW-tarief (%)" name="default_vat_rate" type="number" half value={form.default_vat_rate} onChange={(val) => setForm({ ...form, default_vat_rate: val as number })} />
+          <Field label="Betalingstermijn (dagen)" name="default_payment_days" type="number" half value={form.default_payment_days} onChange={set('default_payment_days')} placeholder="30" />
+          <Field label="BTW-tarief (%)" name="default_vat_rate" type="number" half value={form.default_vat_rate} onChange={set('default_vat_rate')} placeholder="21" />
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Standaard introductietekst</label>
+            <label style={labelStyle}>Standaard introductietekst</label>
             <textarea
               value={form.default_intro}
-              onChange={e => setForm({ ...form, default_intro: e.target.value })}
+              onChange={e => setForm(f => ({ ...f, default_intro: e.target.value }))}
+              onFocus={focusInput}
+              onBlur={blurInput}
               rows={4}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              style={{ ...inputStyle, resize: 'vertical' }}
+              placeholder="Introductietekst die standaard op offertes staat..."
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Standaard slottekst</label>
+            <label style={labelStyle}>Standaard slottekst</label>
             <textarea
               value={form.default_footer}
-              onChange={e => setForm({ ...form, default_footer: e.target.value })}
+              onChange={e => setForm(f => ({ ...f, default_footer: e.target.value }))}
+              onFocus={focusInput}
+              onBlur={blurInput}
               rows={3}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              style={{ ...inputStyle, resize: 'vertical' }}
+              placeholder="Slottekst die standaard op offertes staat..."
             />
           </div>
         </div>
@@ -137,20 +267,33 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
       <button
         onClick={handleSave}
         disabled={saving}
-        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm disabled:opacity-50"
+        style={{
+          background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+          color: 'white',
+          border: 'none',
+          cursor: 'pointer',
+          boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
+        }}
       >
         <Save size={16} /> {saving ? 'Bezig...' : 'Opslaan'}
       </button>
 
       {/* Clients */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+      <div style={cardStyle}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-slate-900">Snelklanten</h2>
+          <h2 style={sectionTitle}>Snelklanten</h2>
           <div className="flex gap-2">
-            <a href="/clients" className="text-sm text-blue-600 hover:underline">Alle klanten beheren →</a>
+            <a href="/clients" className="text-sm" style={{ color: '#818cf8' }}>Alle klanten →</a>
             <button
               onClick={() => setAddingClient(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium"
+              style={{
+                background: 'rgba(99,102,241,0.15)',
+                border: '1px solid rgba(99,102,241,0.3)',
+                color: '#818cf8',
+                cursor: 'pointer',
+              }}
             >
               <Plus size={14} /> Toevoegen
             </button>
@@ -158,47 +301,71 @@ export default function SettingsForm({ profile, clients: initialClients, userId 
         </div>
 
         {addingClient && (
-          <div className="bg-slate-50 rounded-xl p-4 mb-4 space-y-3">
+          <div
+            className="rounded-xl p-4 mb-4 space-y-3"
+            style={{ background: '#12121a', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: 'Naam', key: 'name', placeholder: 'Jan Janssen' },
+                { label: 'Naam *', key: 'name', placeholder: 'Jan Janssen' },
                 { label: 'Bedrijf', key: 'company', placeholder: 'Acme B.V.' },
-                { label: 'E-mail', key: 'email', placeholder: 'jan@acme.nl' },
+                { label: 'E-mail *', key: 'email', placeholder: 'jan@acme.nl' },
                 { label: 'Telefoon', key: 'phone', placeholder: '+31612345678' },
               ].map(({ label, key, placeholder }) => (
                 <div key={key}>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">{label}</label>
+                  <label style={{ ...labelStyle, fontSize: '12px' }}>{label}</label>
                   <input
                     value={newClient[key as keyof typeof newClient]}
                     onChange={e => setNewClient({ ...newClient, [key]: e.target.value })}
                     placeholder={placeholder}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ ...inputStyle, padding: '8px 12px', fontSize: '13px' }}
                   />
                 </div>
               ))}
             </div>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setAddingClient(false)} className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Annuleren</button>
-              <button onClick={handleAddClient} className="px-3 py-1.5 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">Toevoegen</button>
+              <button
+                onClick={() => setAddingClient(false)}
+                className="px-3 py-1.5 text-sm rounded-lg"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#a0a0b0', cursor: 'pointer' }}
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={handleAddClient}
+                className="px-3 py-1.5 text-sm font-medium rounded-lg"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', color: 'white', border: 'none', cursor: 'pointer' }}
+              >
+                Toevoegen
+              </button>
             </div>
           </div>
         )}
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
           {clients.map(c => (
-            <div key={c.id} className="flex items-center justify-between py-3">
+            <div
+              key={c.id}
+              className="flex items-center justify-between py-3"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+            >
               <div>
-                <p className="font-medium text-slate-800">{c.company || c.name}</p>
-                {c.company && <p className="text-sm text-slate-500">{c.name}</p>}
-                <p className="text-sm text-slate-500">{c.email}</p>
+                <p className="font-medium" style={{ color: '#ffffff' }}>{c.company || c.name}</p>
+                {c.company && <p className="text-sm" style={{ color: '#a0a0b0' }}>{c.name}</p>}
+                <p className="text-sm" style={{ color: '#6b6b7a' }}>{c.email}</p>
               </div>
-              <button onClick={() => handleDeleteClient(c.id)} className="text-slate-300 hover:text-red-500 transition-colors">
+              <button
+                onClick={() => handleDeleteClient(c.id)}
+                style={{ color: '#6b6b7a', background: 'none', border: 'none', cursor: 'pointer' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#f87171')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#6b6b7a')}
+              >
                 <Trash2 size={16} />
               </button>
             </div>
           ))}
           {clients.length === 0 && !addingClient && (
-            <p className="text-slate-400 text-sm py-4 text-center">Nog geen klanten toegevoegd</p>
+            <p className="py-4 text-center text-sm" style={{ color: '#6b6b7a' }}>Nog geen klanten</p>
           )}
         </div>
       </div>

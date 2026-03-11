@@ -112,3 +112,36 @@ input:focus, textarea:focus, select:focus {
   cursor: not-allowed;
   transform: none;
 }
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Button scale effect */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Touch scrolling */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile responsive helpers */
+@media (max-width: 640px) {
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  .mobile-full {
+    width: 100% !important;
+  }
+  .mobile-hidden {
+    display: none !important;
+  }
+}

@@ -3,11 +3,11 @@
 import { useRef, useState, useEffect } from 'react'
 import SignatureCanvas from 'react-signature-canvas'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import type { Quote, Profile } from '@/types'
+import type { Quote, Profile, QuoteItem } from '@/types'
 import { CheckCircle, RotateCcw, ThumbsUp, ThumbsDown, ArrowRight, AlertCircle } from 'lucide-react'
 
 interface SignPageProps {
-  quote: Quote & { quote_items?: any[] }
+  quote: Quote & { quote_items?: QuoteItem[] }
   profile: Profile | null
   token: string
 }
@@ -331,7 +331,7 @@ export default function SignPage({ quote, profile, token }: SignPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {quote.quote_items?.map((item: any, i: number) => (
+                {quote.quote_items?.map((item: QuoteItem, i: number) => (
                   <tr
                     key={i}
                     style={{
