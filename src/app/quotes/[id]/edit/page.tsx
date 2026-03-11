@@ -23,12 +23,12 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
   if (!quote) notFound()
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen dot-grid" style={{ background: '#0a0a0f' }}>
       <Navbar />
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Offerte bewerken</h1>
-          <p className="text-slate-500 mt-1">{quote.quote_number}</p>
+          <h1 className="text-3xl font-bold" style={{ color: '#ffffff', fontFamily: 'var(--font-oxanium), Oxanium, sans-serif' }}>Offerte bewerken</h1>
+          <p className="mt-1" style={{ color: '#6b6b7a' }}>{quote.quote_number}</p>
         </div>
         <QuoteForm
           quote={quote}

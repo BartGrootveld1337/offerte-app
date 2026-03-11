@@ -16,7 +16,7 @@ export default async function ClientsPage() {
   ])
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen dot-grid" style={{ background: '#0a0a0f' }}>
       <Navbar />
       <main className="max-w-5xl mx-auto px-6 py-8">
         <ClientsManager initialClients={clients || []} quotes={quotes || []} />

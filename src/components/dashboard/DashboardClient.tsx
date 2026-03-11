@@ -2,13 +2,30 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { formatCurrency, formatDate, statusLabel, statusColor } from '@/lib/utils'
+import { formatCurrency, formatDate, statusLabel } from '@/lib/utils'
 import { Plus, FileText, TrendingUp, Clock, CheckCircle, Eye, Search, Filter, PercentCircle } from 'lucide-react'
 import type { Quote, QuoteStatus } from '@/types'
 
 interface Props {
   quotes: Quote[]
   openedIds: string[]
+}
+
+function statusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case 'sent':
+      return { background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }
+    case 'signed':
+      return { background: 'rgba(34,211,238,0.1)', color: '#22d3ee', border: '1px solid rgba(34,211,238,0.3)' }
+    case 'draft':
+      return { background: 'rgba(107,107,122,0.15)', color: '#a0a0b0', border: '1px solid rgba(107,107,122,0.25)' }
+    case 'expired':
+      return { background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+    case 'declined':
+      return { background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+    default:
+      return { background: 'rgba(107,107,122,0.15)', color: '#a0a0b0' }
+  }
 }
 
 export default function DashboardClient({ quotes, openedIds }: Props) {
@@ -24,7 +41,6 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
   const countSigned = quotes.filter(q => q.status === 'signed').length
   const countDeclined = quotes.filter(q => q.status === 'declined').length
 
-  // Conversion rate: signed / (sent + signed + declined)
   const decidedCount = countSigned + countDeclined
   const conversionRate = decidedCount > 0 ? Math.round((countSigned / decidedCount) * 100) : 0
 
@@ -38,14 +54,28 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
 
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Overzicht van je offertes</p>
+          <h1
+            className="text-3xl font-bold mb-1"
+            style={{
+              fontFamily: 'var(--font-oxanium), Oxanium, sans-serif',
+              color: '#ffffff',
+            }}
+          >
+            Dashboard
+          </h1>
+          <p style={{ color: '#6b6b7a', fontSize: '14px' }}>Overzicht van je offertes</p>
         </div>
         <Link
           href="/quotes/new"
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+            color: 'white',
+            boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+          }}
         >
           <Plus size={18} />
           Nieuwe offerte
@@ -54,42 +84,109 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <StatCard label="Openstaand" value={formatCurrency(totalOpen)} icon={Clock} color="text-blue-600 bg-blue-50" />
-        <StatCard label="Ondertekend" value={formatCurrency(totalSigned)} icon={CheckCircle} color="text-green-600 bg-green-50" />
-        <StatCard label="Concepten" value={String(countDraft)} icon={FileText} color="text-slate-600 bg-slate-50" />
-        <StatCard label="Verstuurd" value={String(countSent)} icon={TrendingUp} color="text-orange-600 bg-orange-50" />
         <StatCard
-          label="Conversiepercentage"
+          label="Openstaand"
+          value={formatCurrency(totalOpen)}
+          icon={Clock}
+          gradient="linear-gradient(135deg, rgba(99,102,241,0.2), rgba(99,102,241,0.05))"
+          iconColor="#818cf8"
+          iconBg="rgba(99,102,241,0.15)"
+        />
+        <StatCard
+          label="Ondertekend"
+          value={formatCurrency(totalSigned)}
+          icon={CheckCircle}
+          gradient="linear-gradient(135deg, rgba(34,211,238,0.15), rgba(34,211,238,0.03))"
+          iconColor="#22d3ee"
+          iconBg="rgba(34,211,238,0.12)"
+        />
+        <StatCard
+          label="Concepten"
+          value={String(countDraft)}
+          icon={FileText}
+          gradient="linear-gradient(135deg, rgba(107,107,122,0.2), rgba(107,107,122,0.05))"
+          iconColor="#a0a0b0"
+          iconBg="rgba(107,107,122,0.15)"
+        />
+        <StatCard
+          label="Verstuurd"
+          value={String(countSent)}
+          icon={TrendingUp}
+          gradient="linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.05))"
+          iconColor="#a855f7"
+          iconBg="rgba(168,85,247,0.15)"
+        />
+        <StatCard
+          label="Conversie"
           value={`${conversionRate}%`}
           icon={PercentCircle}
-          color="text-violet-600 bg-violet-50"
+          gradient="linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.08))"
+          iconColor="#818cf8"
+          iconBg="rgba(99,102,241,0.15)"
           subtitle={`${countSigned} van ${decidedCount} besloten`}
         />
       </div>
 
       {/* Quotes table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: '#1e1e2a',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 4px 30px rgba(0,0,0,0.3)',
+        }}
+      >
+        <div
+          className="p-6"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        >
           <div className="flex flex-wrap gap-3 items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">Alle offertes</h2>
+            <h2
+              className="text-lg font-bold"
+              style={{ color: '#ffffff', fontFamily: 'var(--font-oxanium), Oxanium, sans-serif' }}
+            >
+              Alle offertes
+            </h2>
             <div className="flex gap-3 flex-wrap">
               {/* Search */}
               <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search
+                  size={15}
+                  className="absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: '#6b6b7a' }}
+                />
                 <input
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Zoeken..."
-                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+                  className="pl-9 pr-4 py-2 rounded-xl text-sm w-44"
+                  style={{
+                    background: '#12121a',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: '#ffffff',
+                    outline: 'none',
+                  }}
+                  onFocus={e => (e.target.style.boxShadow = '0 0 0 2px rgba(99,102,241,0.3)')}
+                  onBlur={e => (e.target.style.boxShadow = 'none')}
                 />
               </div>
               {/* Status filter */}
               <div className="relative">
-                <Filter size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Filter
+                  size={15}
+                  className="absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: '#6b6b7a' }}
+                />
                 <select
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value as QuoteStatus | 'all')}
-                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
+                  className="pl-9 pr-4 py-2 rounded-xl text-sm appearance-none"
+                  style={{
+                    background: '#12121a',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: '#ffffff',
+                    outline: 'none',
+                  }}
                 >
                   <option value="all">Alle statussen</option>
                   <option value="draft">Concept</option>
@@ -104,22 +201,29 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
         </div>
 
         {quotes.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <FileText size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="font-medium">Nog geen offertes</p>
-            <Link href="/quotes/new" className="mt-3 inline-block text-blue-600 hover:underline text-sm font-medium">
+          <div className="p-12 text-center">
+            <FileText size={40} className="mx-auto mb-3" style={{ color: '#2a2a3a' }} />
+            <p className="font-medium" style={{ color: '#6b6b7a' }}>Nog geen offertes</p>
+            <Link
+              href="/quotes/new"
+              className="mt-3 inline-block text-sm font-medium"
+              style={{ color: '#6366f1' }}
+            >
               Maak je eerste offerte aan →
             </Link>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            <p>Geen offertes gevonden</p>
+          <div className="p-12 text-center">
+            <p style={{ color: '#6b6b7a' }}>Geen offertes gevonden</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                <tr>
+              <thead>
+                <tr
+                  className="text-xs font-semibold uppercase tracking-wider"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', color: '#6b6b7a' }}
+                >
                   <th className="px-6 py-3 text-left">Nummer</th>
                   <th className="px-6 py-3 text-left">Klant</th>
                   <th className="px-6 py-3 text-left">Titel</th>
@@ -128,33 +232,48 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
                   <th className="px-6 py-3 text-right">Bedrag</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {filtered.map((quote) => (
-                  <tr key={quote.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={quote.id}
+                    className="transition-all"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.05)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <Link href={`/quotes/${quote.id}`} className="font-mono text-sm font-semibold text-blue-600 hover:underline">
+                        <Link
+                          href={`/quotes/${quote.id}`}
+                          className="font-mono text-sm font-semibold transition-colors"
+                          style={{ color: '#818cf8' }}
+                        >
                           {quote.quote_number}
                         </Link>
                         {openedSet.has(quote.id) && (
                           <span title="Bekeken door klant">
-                            <Eye size={13} className="text-blue-400" />
+                            <Eye size={13} style={{ color: '#22d3ee' }} />
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">
+                    <td className="px-6 py-4 text-sm" style={{ color: '#a0a0b0' }}>
                       {(quote as Quote & { clients?: { company?: string; name: string } }).clients?.company ||
                        (quote as Quote & { clients?: { company?: string; name: string } }).clients?.name || '—'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{quote.title}</td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{formatDate(quote.created_at)}</td>
+                    <td className="px-6 py-4 text-sm" style={{ color: '#a0a0b0' }}>{quote.title}</td>
+                    <td className="px-6 py-4 text-sm" style={{ color: '#6b6b7a' }}>{formatDate(quote.created_at)}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor(quote.status)}`}>
+                      <span
+                        className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold"
+                        style={statusBadgeStyle(quote.status)}
+                      >
                         {statusLabel(quote.status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-semibold text-slate-900">{formatCurrency(quote.total)}</td>
+                    <td className="px-6 py-4 text-right font-semibold" style={{ color: '#ffffff' }}>
+                      {formatCurrency(quote.total)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -166,21 +285,35 @@ export default function DashboardClient({ quotes, openedIds }: Props) {
   )
 }
 
-function StatCard({ label, value, icon: Icon, color, subtitle }: {
+function StatCard({
+  label, value, icon: Icon, gradient, iconColor, iconBg, subtitle,
+}: {
   label: string
   value: string
   icon: React.ElementType
-  color: string
+  gradient: string
+  iconColor: string
+  iconBg: string
   subtitle?: string
 }) {
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-      <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center mb-3`}>
-        <Icon size={20} />
+    <div
+      className="rounded-2xl p-5 transition-all"
+      style={{
+        background: gradient,
+        border: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: '0 2px 20px rgba(0,0,0,0.2)',
+      }}
+    >
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+        style={{ background: iconBg }}
+      >
+        <Icon size={20} style={{ color: iconColor }} />
       </div>
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <p className="text-sm text-slate-500 mt-0.5">{label}</p>
-      {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+      <p className="text-2xl font-bold" style={{ color: '#ffffff' }}>{value}</p>
+      <p className="text-sm mt-0.5" style={{ color: '#a0a0b0' }}>{label}</p>
+      {subtitle && <p className="text-xs mt-0.5" style={{ color: '#6b6b7a' }}>{subtitle}</p>}
     </div>
   )
 }

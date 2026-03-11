@@ -75,7 +75,7 @@ export default function ApiKeysManager({ initialKeys }: Props) {
           <p className="text-amber-700 text-sm mb-3">
             Dit is de enige keer dat je de volledige sleutel ziet. Sla hem op in een veilige plek.
           </p>
-          <div className="bg-white border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
+          <div className="bg-[#1e1e2a] border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3">
             <code className="font-mono text-sm text-slate-800 break-all flex-1">
               {showNewKey ? newRawKey : `${newRawKey.substring(0, 20)}${'•'.repeat(20)}`}
             </code>
@@ -95,14 +95,14 @@ export default function ApiKeysManager({ initialKeys }: Props) {
       )}
 
       {/* Create new */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <Key size={18} className="text-blue-600" />
+      <div className="bg-[#1e1e2a] rounded-2xl p-6 shadow-sm border border-white/6">
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Key size={18} className="text-indigo-400" />
           API Sleutels
         </h2>
-        <p className="text-slate-500 text-sm mb-5">
+        <p className="text-[#6b6b7a] text-sm mb-5">
           Gebruik API-sleutels om de REST API te gebruiken voor CRM-integraties.
-          Zie de <a href="/api-docs" className="text-blue-600 hover:underline inline-flex items-center gap-1">API documentatie <ExternalLink size={12} /></a> voor meer info.
+          Zie de <a href="/api-docs" className="text-indigo-400 hover:underline inline-flex items-center gap-1">API documentatie <ExternalLink size={12} /></a> voor meer info.
         </p>
 
         <div className="flex gap-3 mb-6">
@@ -110,13 +110,13 @@ export default function ApiKeysManager({ initialKeys }: Props) {
             value={newKeyName}
             onChange={e => setNewKeyName(e.target.value)}
             placeholder="Naam voor de sleutel, bijv. 'HubSpot CRM'"
-            className="flex-1 px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-white/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
             onKeyDown={e => e.key === 'Enter' && handleCreate()}
           />
           <button
             onClick={handleCreate}
             disabled={creating || !newKeyName.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
           >
             <Plus size={16} />
             {creating ? 'Aanmaken...' : 'Aanmaken'}
@@ -125,25 +125,25 @@ export default function ApiKeysManager({ initialKeys }: Props) {
 
         {/* Keys list */}
         {keys.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
+          <div className="text-center py-8 text-[#6b6b7a]">
             <Key size={32} className="mx-auto mb-3 opacity-30" />
             <p>Nog geen API-sleutels aangemaakt</p>
           </div>
         ) : (
           <div className="space-y-3">
             {keys.map(key => (
-              <div key={key.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:border-slate-300 transition-colors">
+              <div key={key.id} className="flex items-center justify-between p-4 border border-white/8 rounded-xl hover:border-slate-300 transition-colors">
                 <div>
-                  <p className="font-semibold text-slate-900">{key.name}</p>
-                  <code className="text-xs font-mono text-slate-500">{key.key_prefix}•••••••••••••••••••</code>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="font-semibold text-white">{key.name}</p>
+                  <code className="text-xs font-mono text-[#6b6b7a]">{key.key_prefix}•••••••••••••••••••</code>
+                  <p className="text-xs text-[#6b6b7a] mt-0.5">
                     Aangemaakt: {formatDateTime(key.created_at)}
                     {key.last_used_at && ` · Laatst gebruikt: ${formatDateTime(key.last_used_at)}`}
                   </p>
                 </div>
                 <button
                   onClick={() => setDeleteConfirm(key.id)}
-                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-4"
+                  className="p-2 text-[#6b6b7a] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-4"
                   title="Intrekken"
                 >
                   <Trash2 size={15} />
@@ -157,11 +157,11 @@ export default function ApiKeysManager({ initialKeys }: Props) {
       {/* Delete confirm */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">API sleutel intrekken?</h3>
-            <p className="text-slate-500 text-sm mb-6">Apps die deze sleutel gebruiken kunnen niet meer inloggen.</p>
+          <div className="bg-[#1e1e2a] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-2">API sleutel intrekken?</h3>
+            <p className="text-[#6b6b7a] text-sm mb-6">Apps die deze sleutel gebruiken kunnen niet meer inloggen.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-medium">
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 px-4 py-2.5 border border-white/8 rounded-xl text-[#a0a0b0] font-medium">
                 Annuleren
               </button>
               <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl">

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { formatCurrency, formatDate, formatDateTime, statusLabel, statusColor, eventLabel, eventColor } from '@/lib/utils'
+import { formatCurrency, formatDate, formatDateTime, statusLabel, eventLabel, eventColor } from '@/lib/utils'
 import type { Quote, Profile, QuoteEvent } from '@/types'
 import { Send, Edit, Copy, CheckCircle, ArrowLeft, Clock, Download, Eye, X, Loader2, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -14,6 +14,35 @@ interface QuoteDetailProps {
   profile: Profile | null
   events: QuoteEvent[]
   autoSend?: boolean
+}
+
+function statusBadgeStyle(status: string): React.CSSProperties {
+  switch (status) {
+    case 'sent': return { background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }
+    case 'signed': return { background: 'rgba(34,211,238,0.1)', color: '#22d3ee', border: '1px solid rgba(34,211,238,0.3)' }
+    case 'draft': return { background: 'rgba(107,107,122,0.15)', color: '#a0a0b0', border: '1px solid rgba(107,107,122,0.25)' }
+    case 'expired': return { background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+    case 'declined': return { background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }
+    default: return { background: 'rgba(107,107,122,0.15)', color: '#a0a0b0' }
+  }
+}
+
+const inputStyle: React.CSSProperties = {
+  background: '#12121a',
+  border: '1px solid rgba(255,255,255,0.08)',
+  color: '#ffffff',
+  borderRadius: '10px',
+  padding: '8px 12px',
+  width: '100%',
+  outline: 'none',
+  fontSize: '14px',
+}
+
+function focusInput(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.boxShadow = '0 0 0 2px rgba(99,102,241,0.4)'
+}
+function blurInput(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.boxShadow = 'none'
 }
 
 export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteDetailProps) {
@@ -69,7 +98,6 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
     window.open(`/api/quotes/${quote.id}/pdf`, '_blank')
   }
 
-  // Reload events periodically when quote is sent
   useEffect(() => {
     if (quote.status !== 'sent') return
     const interval = setInterval(async () => {
@@ -83,31 +111,64 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
     return () => clearInterval(interval)
   }, [quote.status])
 
+  const cardStyle: React.CSSProperties = {
+    background: '#1e1e2a',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: '16px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+  }
+
+  const btnOutlineStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    color: '#a0a0b0',
+    borderRadius: '12px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: 500,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  }
+
+  const btnGradientStyle: React.CSSProperties = {
+    background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+    color: 'white',
+    borderRadius: '12px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
+    transition: 'all 0.15s',
+    border: 'none',
+  }
+
   return (
     <div>
       {/* Back + actions */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <Link href="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 transition-colors text-sm"
+          style={{ color: '#6b6b7a' }}
+        >
           <ArrowLeft size={16} /> Terug naar dashboard
         </Link>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleDownloadPDF}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors"
-          >
+          <button onClick={handleDownloadPDF} style={btnOutlineStyle}>
             <Download size={16} /> Download PDF
           </button>
-          <Link
-            href={`/quotes/${quote.id}/edit`}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors"
-          >
+          <Link href={`/quotes/${quote.id}/edit`} style={{ ...btnOutlineStyle, textDecoration: 'none' }}>
             <Edit size={16} /> Bewerken
           </Link>
           {quote.status !== 'signed' && quote.status !== 'declined' && (
-            <button
-              onClick={() => setShowSendModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-colors"
-            >
+            <button onClick={() => setShowSendModal(true)} style={btnGradientStyle}>
               <Send size={16} /> Versturen
             </button>
           )}
@@ -116,67 +177,116 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
 
       {/* Status banners */}
       {quote.status === 'signed' && (
-        <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
-          <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
+        <div
+          className="p-4 mb-6 flex items-center gap-3 rounded-2xl"
+          style={{ background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.25)' }}
+        >
+          <CheckCircle className="flex-shrink-0" size={20} style={{ color: '#22d3ee' }} />
           <div>
-            <p className="font-bold text-green-800">Ondertekend door {quote.signed_name}</p>
-            <p className="text-green-700 text-sm">{quote.signed_at ? formatDate(quote.signed_at) : ''}</p>
+            <p className="font-bold" style={{ color: '#22d3ee' }}>Ondertekend door {quote.signed_name}</p>
+            <p className="text-sm" style={{ color: '#a0a0b0' }}>{quote.signed_at ? formatDate(quote.signed_at) : ''}</p>
           </div>
         </div>
       )}
 
       {quote.status === 'declined' && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
+        <div
+          className="p-4 mb-6 rounded-2xl"
+          style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)' }}
+        >
           <div className="flex items-center gap-3 mb-2">
-            <X className="text-red-600 flex-shrink-0" size={20} />
-            <p className="font-bold text-red-800">Offerte afgewezen</p>
+            <X className="flex-shrink-0" size={20} style={{ color: '#f87171' }} />
+            <p className="font-bold" style={{ color: '#f87171' }}>Offerte afgewezen</p>
           </div>
           {quote.declined_reason && (
-            <p className="text-red-700 text-sm ml-8">Reden: {quote.declined_reason}</p>
+            <p className="text-sm ml-8" style={{ color: '#a0a0b0' }}>Reden: {quote.declined_reason}</p>
           )}
         </div>
       )}
 
       {(sent || quote.status === 'sent') && quote.status !== 'signed' && quote.status !== 'declined' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex items-center justify-between">
+        <div
+          className="p-4 mb-6 flex items-center justify-between rounded-2xl"
+          style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)' }}
+        >
           <div className="flex items-center gap-3">
-            {hasOpened
-              ? <Eye className="text-blue-600" size={20} />
-              : <Clock className="text-blue-600" size={20} />}
+            {hasOpened ? <Eye size={20} style={{ color: '#818cf8' }} /> : <Clock size={20} style={{ color: '#818cf8' }} />}
             <div>
-              <p className="font-bold text-blue-800">
+              <p className="font-bold" style={{ color: '#818cf8' }}>
                 {hasOpened ? '👁 Geopend door klant' : 'Verstuurd — wacht op ondertekening'}
               </p>
-              <p className="text-blue-600 text-xs break-all">{signUrl}</p>
+              <p className="text-xs break-all" style={{ color: '#6b6b7a' }}>{signUrl}</p>
             </div>
           </div>
-          <button onClick={handleCopyLink} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 ml-4 flex-shrink-0">
+          <button
+            onClick={handleCopyLink}
+            className="flex items-center gap-1 ml-4 flex-shrink-0 text-sm font-medium"
+            style={{ color: '#818cf8' }}
+          >
             <Copy size={14} /> Kopieer
           </button>
         </div>
       )}
 
       {/* Quote preview */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="bg-slate-900 text-white p-8">
-          <div className="flex justify-between items-start flex-wrap gap-4">
+      <div style={{ ...cardStyle, overflow: 'hidden' }}>
+        {/* Header */}
+        <div
+          style={{
+            background: 'linear-gradient(145deg, #12121a 0%, #1a1a25 100%)',
+            padding: '32px',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Gradient accent top */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '3px',
+              background: 'linear-gradient(90deg, #6366f1, #a855f7, #22d3ee)',
+            }}
+          />
+          <div className="flex justify-between items-start flex-wrap gap-4 mt-2">
             <div>
               {profile?.logo_url && (
                 <img src={profile.logo_url} alt="Logo" className="h-10 mb-4 object-contain" />
               )}
-              <h1 className="text-3xl font-bold">{quote.title}</h1>
-              <p className="text-slate-400 mt-1 font-mono text-sm">{quote.quote_number}</p>
+              <h1
+                className="text-3xl font-bold"
+                style={{ color: '#ffffff', fontFamily: 'var(--font-oxanium), Oxanium, sans-serif' }}
+              >
+                {quote.title}
+              </h1>
+              <p className="font-mono text-sm mt-1" style={{ color: '#6b6b7a' }}>{quote.quote_number}</p>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold">{formatCurrency(quote.total)}</p>
-              <p className="text-slate-400 text-sm">incl. BTW</p>
-              <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${statusColor(quote.status)}`}>
+              <p
+                className="text-3xl font-bold"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #a855f7, #22d3ee)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                {formatCurrency(quote.total)}
+              </p>
+              <p className="text-sm mt-1" style={{ color: '#6b6b7a' }}>incl. BTW</p>
+              <span
+                className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold"
+                style={statusBadgeStyle(quote.status)}
+              >
                 {statusLabel(quote.status)}
               </span>
               {hasOpened && (
                 <div className="mt-2 flex items-center gap-1 justify-end">
-                  <Eye size={12} className="text-blue-400" />
-                  <span className="text-blue-400 text-xs">Bekeken</span>
+                  <Eye size={12} style={{ color: '#22d3ee' }} />
+                  <span className="text-xs" style={{ color: '#22d3ee' }}>Bekeken</span>
                 </div>
               )}
             </div>
@@ -186,85 +296,139 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
         <div className="p-8 space-y-6">
           <div className="grid grid-cols-2 gap-8 text-sm">
             <div>
-              <p className="font-bold text-slate-500 uppercase text-xs tracking-wider mb-2">Van</p>
-              <p className="font-bold text-slate-900">{profile?.company_name}</p>
-              {profile?.company_address && <p className="text-slate-600">{profile.company_address}</p>}
-              {profile?.company_city && <p className="text-slate-600">{profile.company_postal} {profile.company_city}</p>}
-              {profile?.company_kvk && <p className="text-slate-500 text-xs">KvK: {profile.company_kvk}</p>}
-              {profile?.company_btw && <p className="text-slate-500 text-xs">BTW: {profile.company_btw}</p>}
+              <p className="font-bold text-xs uppercase tracking-wider mb-2" style={{ color: '#6b6b7a' }}>Van</p>
+              <p className="font-bold" style={{ color: '#ffffff' }}>{profile?.company_name}</p>
+              {profile?.company_address && <p style={{ color: '#a0a0b0' }}>{profile.company_address}</p>}
+              {profile?.company_city && <p style={{ color: '#a0a0b0' }}>{profile.company_postal} {profile.company_city}</p>}
+              {profile?.company_kvk && <p className="text-xs" style={{ color: '#6b6b7a' }}>KvK: {profile.company_kvk}</p>}
+              {profile?.company_btw && <p className="text-xs" style={{ color: '#6b6b7a' }}>BTW: {profile.company_btw}</p>}
             </div>
             {quote.clients && (
               <div>
-                <p className="font-bold text-slate-500 uppercase text-xs tracking-wider mb-2">Aan</p>
-                {quote.clients.company && <p className="font-bold text-slate-900">{quote.clients.company}</p>}
-                <p className="text-slate-600">{quote.clients.name}</p>
-                <p className="text-slate-600">{quote.clients.email}</p>
-                {quote.clients.address && <p className="text-slate-600">{quote.clients.address}</p>}
+                <p className="font-bold text-xs uppercase tracking-wider mb-2" style={{ color: '#6b6b7a' }}>Aan</p>
+                {quote.clients.company && <p className="font-bold" style={{ color: '#ffffff' }}>{quote.clients.company}</p>}
+                <p style={{ color: '#a0a0b0' }}>{quote.clients.name}</p>
+                <p style={{ color: '#818cf8' }}>{quote.clients.email}</p>
+                {quote.clients.address && <p style={{ color: '#a0a0b0' }}>{quote.clients.address}</p>}
               </div>
             )}
           </div>
 
-          <div className="flex gap-6 text-sm text-slate-600 border-t border-slate-100 pt-4">
-            <span><strong>Datum:</strong> {formatDate(quote.created_at)}</span>
-            {quote.valid_until && <span><strong>Geldig tot:</strong> {formatDate(quote.valid_until)}</span>}
+          <div
+            className="flex gap-6 text-sm pt-4"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: '#a0a0b0' }}
+          >
+            <span><strong style={{ color: '#ffffff' }}>Datum:</strong> {formatDate(quote.created_at)}</span>
+            {quote.valid_until && (
+              <span><strong style={{ color: '#ffffff' }}>Geldig tot:</strong> {formatDate(quote.valid_until)}</span>
+            )}
           </div>
 
-          {quote.intro && <p className="text-slate-700 text-sm whitespace-pre-wrap">{quote.intro}</p>}
+          {quote.intro && (
+            <p
+              className="text-sm whitespace-pre-wrap pl-4 py-3 rounded-r-xl"
+              style={{
+                color: '#a0a0b0',
+                borderLeft: '3px solid rgba(99,102,241,0.5)',
+                background: 'rgba(99,102,241,0.05)',
+              }}
+            >
+              {quote.intro}
+            </p>
+          )}
 
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b-2 border-slate-200">
-                <th className="text-left py-2 text-slate-500 font-semibold">Omschrijving</th>
-                <th className="text-center py-2 text-slate-500 font-semibold w-20">Aantal</th>
-                <th className="text-right py-2 text-slate-500 font-semibold w-28">Prijs</th>
-                <th className="text-center py-2 text-slate-500 font-semibold w-16">BTW</th>
-                <th className="text-right py-2 text-slate-500 font-semibold w-28">Totaal</th>
+              <tr>
+                <th
+                  className="text-left py-3 px-4 text-xs uppercase font-semibold rounded-tl-xl"
+                  style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}
+                >
+                  Omschrijving
+                </th>
+                <th className="text-center py-3 px-3 w-20 text-xs uppercase font-semibold" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>Aantal</th>
+                <th className="text-right py-3 px-3 w-28 text-xs uppercase font-semibold" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>Prijs</th>
+                <th className="text-center py-3 px-3 w-16 text-xs uppercase font-semibold" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>BTW</th>
+                <th className="text-right py-3 px-4 w-28 text-xs uppercase font-semibold rounded-tr-xl" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>Totaal</th>
               </tr>
             </thead>
             <tbody>
               {quote.quote_items?.map((item: any, i: number) => (
-                <tr key={i} className="border-b border-slate-100">
-                  <td className="py-3 text-slate-800">{item.description}</td>
-                  <td className="py-3 text-center text-slate-600">{item.quantity} {item.unit}</td>
-                  <td className="py-3 text-right text-slate-600">{formatCurrency(item.unit_price)}</td>
-                  <td className="py-3 text-center text-slate-600">{item.vat_rate}%</td>
-                  <td className="py-3 text-right font-medium text-slate-800">{formatCurrency(item.line_total)}</td>
+                <tr
+                  key={i}
+                  style={{
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    background: i % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                  }}
+                >
+                  <td className="py-3 px-4 font-medium" style={{ color: '#ffffff' }}>{item.description}</td>
+                  <td className="py-3 px-3 text-center" style={{ color: '#a0a0b0' }}>{item.quantity} {item.unit}</td>
+                  <td className="py-3 px-3 text-right" style={{ color: '#a0a0b0' }}>{formatCurrency(item.unit_price)}</td>
+                  <td className="py-3 px-3 text-center" style={{ color: '#6b6b7a' }}>{item.vat_rate}%</td>
+                  <td className="py-3 px-4 text-right font-semibold" style={{ color: '#ffffff' }}>{formatCurrency(item.line_total)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
           <div className="ml-auto w-64 space-y-2 text-sm">
-            <div className="flex justify-between text-slate-600">
+            <div className="flex justify-between" style={{ color: '#a0a0b0' }}>
               <span>Subtotaal</span><span>{formatCurrency(quote.subtotal)}</span>
             </div>
-            {(quote.discount_percent || 0) > 0 || (quote.discount_amount || 0) > 0 ? (
-              <div className="flex justify-between text-red-600">
+            {((quote.discount_percent || 0) > 0 || (quote.discount_amount || 0) > 0) && (
+              <div className="flex justify-between" style={{ color: '#f87171' }}>
                 <span>Korting</span>
                 <span>
                   {(quote.discount_percent || 0) > 0 ? `-${quote.discount_percent}%` : ''}{' '}
                   {(quote.discount_amount || 0) > 0 ? `- ${formatCurrency(quote.discount_amount || 0)}` : ''}
                 </span>
               </div>
-            ) : null}
-            <div className="flex justify-between text-slate-600">
+            )}
+            <div className="flex justify-between" style={{ color: '#a0a0b0' }}>
               <span>BTW</span><span>{formatCurrency(quote.vat_amount)}</span>
             </div>
-            <div className="flex justify-between font-bold text-slate-900 text-base border-t-2 border-slate-200 pt-2">
-              <span>Totaal</span><span>{formatCurrency(quote.total)}</span>
+            <div
+              className="flex justify-between font-bold text-base pt-2"
+              style={{ borderTop: '2px solid rgba(99,102,241,0.3)', color: '#ffffff' }}
+            >
+              <span>Totaal</span>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                {formatCurrency(quote.total)}
+              </span>
             </div>
           </div>
 
-          {quote.footer && <p className="text-slate-600 text-sm whitespace-pre-wrap border-t border-slate-100 pt-4">{quote.footer}</p>}
+          {quote.footer && (
+            <p
+              className="text-sm whitespace-pre-wrap pt-4"
+              style={{ color: '#6b6b7a', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {quote.footer}
+            </p>
+          )}
 
           {quote.signed_at && (
-            <div className="border-t border-slate-100 pt-6">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Digitale handtekening</p>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '24px' }}>
+              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: '#6b6b7a' }}>
+                Digitale handtekening
+              </p>
               {quote.signature_url && (
-                <img src={quote.signature_url} alt="Handtekening" className="h-16 border border-slate-200 rounded-lg p-2 bg-slate-50" />
+                <img
+                  src={quote.signature_url}
+                  alt="Handtekening"
+                  className="h-16 rounded-lg p-2"
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.05)' }}
+                />
               )}
-              <p className="text-sm text-slate-600 mt-2">
-                Ondertekend door <strong>{quote.signed_name}</strong> op {formatDate(quote.signed_at)}
+              <p className="text-sm mt-2" style={{ color: '#a0a0b0' }}>
+                Ondertekend door <strong style={{ color: '#ffffff' }}>{quote.signed_name}</strong> op {formatDate(quote.signed_at)}
               </p>
             </div>
           )}
@@ -273,9 +437,9 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
 
       {/* Events timeline */}
       {liveEvents.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
-          <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <FileText size={16} />
+        <div style={{ ...cardStyle, padding: '24px', marginTop: '24px' }}>
+          <h3 className="font-bold mb-4 flex items-center gap-2" style={{ color: '#ffffff' }}>
+            <FileText size={16} style={{ color: '#6366f1' }} />
             Activiteitenlog
           </h3>
           <div className="space-y-3">
@@ -289,9 +453,9 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
                   {eventLabel(event.event_type)}
                 </span>
                 <div>
-                  <p className="text-xs text-slate-500">{formatDateTime(event.created_at)}</p>
+                  <p className="text-xs" style={{ color: '#6b6b7a' }}>{formatDateTime(event.created_at)}</p>
                   {event.ip_address && event.ip_address !== 'unknown' && (
-                    <p className="text-xs text-slate-400">IP: {event.ip_address}</p>
+                    <p className="text-xs" style={{ color: '#6b6b7a' }}>IP: {event.ip_address}</p>
                   )}
                 </div>
               </div>
@@ -302,51 +466,83 @@ export default function QuoteDetail({ quote, profile, events, autoSend }: QuoteD
 
       {/* Send modal */}
       {showSendModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Offerte versturen</h2>
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
+          <div
+            className="w-full max-w-md rounded-2xl p-6"
+            style={{
+              background: '#1a1a25',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 25px 80px rgba(0,0,0,0.6)',
+            }}
+          >
+            <h2 className="text-xl font-bold mb-4" style={{ color: '#ffffff', fontFamily: 'var(--font-oxanium), Oxanium, sans-serif' }}>
+              Offerte versturen
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Naam klant</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#a0a0b0' }}>Naam klant</label>
                 <input
                   value={clientName}
                   onChange={e => setClientName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={inputStyle}
+                  onFocus={focusInput}
+                  onBlur={blurInput}
                   placeholder="Voornaam Achternaam"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">E-mailadres klant</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#a0a0b0' }}>E-mailadres klant</label>
                 <input
                   type="email"
                   value={clientEmail}
                   onChange={e => setClientEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={inputStyle}
+                  onFocus={focusInput}
+                  onBlur={blurInput}
                   placeholder="klant@bedrijf.nl"
                 />
               </div>
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-xs font-medium text-slate-600 mb-1">Ondertekeningslink:</p>
-                <p className="font-mono text-xs text-slate-500 break-all">{signUrl}</p>
+              <div
+                className="rounded-xl p-3"
+                style={{ background: '#12121a', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <p className="text-xs font-medium mb-1" style={{ color: '#6b6b7a' }}>Ondertekeningslink:</p>
+                <p className="font-mono text-xs break-all" style={{ color: '#818cf8' }}>{signUrl}</p>
               </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowSendModal(false)}
-                className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-colors"
+                className="flex-1 px-4 py-2 rounded-xl font-medium transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#a0a0b0',
+                }}
               >
                 Annuleren
               </button>
               <button
                 onClick={handleCopyLink}
-                className="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-colors flex items-center gap-2 flex-shrink-0"
+                className="px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 flex-shrink-0"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#a0a0b0',
+                }}
               >
                 <Copy size={14} />
               </button>
               <button
                 onClick={handleSend}
                 disabled={sending || !clientEmail}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 rounded-xl font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  color: 'white',
+                  boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
+                  border: 'none',
+                }}
               >
                 {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 {sending ? 'Versturen...' : 'Versturen'}

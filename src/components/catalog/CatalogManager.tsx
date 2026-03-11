@@ -103,15 +103,15 @@ export default function CatalogManager({ initialItems }: Props) {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <BookOpen size={24} className="text-blue-600" />
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <BookOpen size={24} className="text-indigo-400" />
             Product & Diensten Catalogus
           </h1>
-          <p className="text-slate-500 mt-1">Beheer je standaard diensten en producten voor snelle offertes</p>
+          <p className="text-[#6b6b7a] mt-1">Beheer je standaard diensten en producten voor snelle offertes</p>
         </div>
         <button
           onClick={openNew}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 btn-gradient text-white font-bold rounded-xl transition-colors"
         >
           <Plus size={18} /> Nieuw item
         </button>
@@ -119,30 +119,30 @@ export default function CatalogManager({ initialItems }: Props) {
 
       {/* Search */}
       <div className="mb-6 relative">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b6b7a]" />
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Zoeken in catalogus..."
-          className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="w-full pl-10 pr-4 py-2.5 border border-white/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-[#1e1e2a]"
         />
       </div>
 
       {/* Items */}
       {items.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center shadow-sm border border-slate-100">
+        <div className="bg-[#1e1e2a] rounded-2xl p-16 text-center shadow-sm border border-white/6">
           <BookOpen size={48} className="mx-auto mb-4 text-slate-200" />
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Lege catalogus</h3>
-          <p className="text-slate-500 mb-6">Voeg je standaard diensten en producten toe om snel offertes te kunnen opstellen.</p>
+          <h3 className="text-lg font-bold text-white mb-2">Lege catalogus</h3>
+          <p className="text-[#6b6b7a] mb-6">Voeg je standaard diensten en producten toe om snel offertes te kunnen opstellen.</p>
           <button
             onClick={openNew}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 btn-gradient text-white font-bold rounded-xl transition-colors"
           >
             <Plus size={16} /> Eerste item toevoegen
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="text-center py-12 text-[#6b6b7a]">
           <p>Geen resultaten voor &quot;{search}&quot;</p>
         </div>
       ) : (
@@ -153,7 +153,7 @@ export default function CatalogManager({ initialItems }: Props) {
             if (!catItems.length) return null
             return (
               <div key={cat}>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">{cat}</h3>
+                <h3 className="text-xs font-bold text-[#6b6b7a] uppercase tracking-wider mb-3 px-1">{cat}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {catItems.map(item => (
                     <CatalogCard
@@ -172,7 +172,7 @@ export default function CatalogManager({ initialItems }: Props) {
           {filtered.filter(i => !i.category).length > 0 && (
             <div>
               {categories.length > 0 && (
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Overig</h3>
+                <h3 className="text-xs font-bold text-[#6b6b7a] uppercase tracking-wider mb-3 px-1">Overig</h3>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {filtered.filter(i => !i.category).map(item => (
@@ -192,12 +192,12 @@ export default function CatalogManager({ initialItems }: Props) {
       {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+          <div className="bg-[#1e1e2a] rounded-2xl p-6 w-full max-w-lg shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-white">
                 {editing ? 'Item bewerken' : 'Nieuw item'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowForm(false)} className="text-[#6b6b7a] hover:text-[#a0a0b0]">
                 <X size={20} />
               </button>
             </div>
@@ -205,44 +205,44 @@ export default function CatalogManager({ initialItems }: Props) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Naam *</label>
+                  <label className="block text-sm font-medium text-[#a0a0b0] mb-1">Naam *</label>
                   <input
                     value={form.name || ''}
                     onChange={e => setForm({ ...form, name: e.target.value })}
                     placeholder="Naam van het product of dienst"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-white/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Beschrijving</label>
+                  <label className="block text-sm font-medium text-[#a0a0b0] mb-1">Beschrijving</label>
                   <textarea
                     value={form.description || ''}
                     onChange={e => setForm({ ...form, description: e.target.value })}
                     rows={2}
                     placeholder="Korte omschrijving (optioneel)"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                    className="w-full px-3 py-2 border border-white/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Categorie</label>
+                  <label className="block text-sm font-medium text-[#a0a0b0] mb-1">Categorie</label>
                   <input
                     value={form.category || ''}
                     onChange={e => setForm({ ...form, category: e.target.value })}
                     placeholder="Bijv. Consultancy"
                     list="categories"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-white/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <datalist id="categories">
                     {categories.map(c => <option key={c} value={c || ''} />)}
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Eenheid</label>
+                  <label className="block text-sm font-medium text-[#a0a0b0] mb-1">Eenheid</label>
                   <input
                     value={form.unit || ''}
                     onChange={e => setForm({ ...form, unit: e.target.value })}
                     list="units"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-white/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <datalist id="units">
                     <option value="stuks" />
@@ -254,25 +254,25 @@ export default function CatalogManager({ initialItems }: Props) {
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Prijs (excl. BTW)</label>
+                  <label className="block text-sm font-medium text-[#a0a0b0] mb-1">Prijs (excl. BTW)</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">€</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b6b7a]">€</span>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={form.unit_price || ''}
                       onChange={e => setForm({ ...form, unit_price: parseFloat(e.target.value) || 0 })}
-                      className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-7 pr-3 py-2 border border-white/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">BTW-tarief</label>
+                  <label className="block text-sm font-medium text-[#a0a0b0] mb-1">BTW-tarief</label>
                   <select
                     value={form.vat_rate || 21}
                     onChange={e => setForm({ ...form, vat_rate: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-white/8 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value={0}>0%</option>
                     <option value={9}>9%</option>
@@ -285,14 +285,14 @@ export default function CatalogManager({ initialItems }: Props) {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium transition-colors"
+                className="flex-1 px-4 py-2.5 border border-white/8 rounded-xl text-[#a0a0b0] hover:bg-[#12121a] font-medium transition-colors"
               >
                 Annuleren
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 btn-gradient text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Save size={15} />
                 {saving ? 'Opslaan...' : editing ? 'Bijwerken' : 'Toevoegen'}
@@ -305,13 +305,13 @@ export default function CatalogManager({ initialItems }: Props) {
       {/* Delete confirm */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Item verwijderen?</h3>
-            <p className="text-slate-500 text-sm mb-6">Dit kan niet ongedaan worden gemaakt.</p>
+          <div className="bg-[#1e1e2a] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-2">Item verwijderen?</h3>
+            <p className="text-[#6b6b7a] text-sm mb-6">Dit kan niet ongedaan worden gemaakt.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium"
+                className="flex-1 px-4 py-2.5 border border-white/8 rounded-xl text-[#a0a0b0] hover:bg-[#12121a] font-medium"
               >
                 Annuleren
               </button>
@@ -335,29 +335,29 @@ function CatalogCard({ item, onEdit, onDelete }: {
   onDelete: () => void
 }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-200 hover:shadow-sm transition-all group">
+    <div className="bg-[#1e1e2a] rounded-xl border border-white/8 p-4 hover:border-indigo-500/30 hover:shadow-sm transition-all group">
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-slate-900 truncate">{item.name}</p>
+          <p className="font-semibold text-white truncate">{item.name}</p>
           {item.description && (
-            <p className="text-sm text-slate-500 mt-0.5 truncate">{item.description}</p>
+            <p className="text-sm text-[#6b6b7a] mt-0.5 truncate">{item.description}</p>
           )}
           <div className="flex items-center gap-3 mt-2">
-            <span className="font-bold text-slate-900">{formatCurrency(item.unit_price)}</span>
-            <span className="text-xs text-slate-400">per {item.unit}</span>
-            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{item.vat_rate}% BTW</span>
+            <span className="font-bold text-white">{formatCurrency(item.unit_price)}</span>
+            <span className="text-xs text-[#6b6b7a]">per {item.unit}</span>
+            <span className="text-xs bg-[#1a1a25] text-[#6b6b7a] px-2 py-0.5 rounded-full">{item.vat_rate}% BTW</span>
           </div>
         </div>
         <div className="flex items-center gap-1 ml-3 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onEdit}
-            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="p-1.5 text-[#6b6b7a] hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
           >
             <Edit2 size={15} />
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-1.5 text-[#6b6b7a] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
             <Trash2 size={15} />
           </button>

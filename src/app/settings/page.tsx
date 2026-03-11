@@ -27,13 +27,27 @@ export default async function SettingsPage({
   const activeTab = tab || 'profile'
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen dot-grid" style={{ background: '#0a0a0f' }}>
       <Navbar />
       <main className="max-w-3xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-6">Instellingen</h1>
+        <h1
+          className="text-3xl font-bold mb-6"
+          style={{
+            color: '#ffffff',
+            fontFamily: 'var(--font-oxanium), Oxanium, sans-serif',
+          }}
+        >
+          Instellingen
+        </h1>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm border border-slate-100 mb-6 w-fit">
+        <div
+          className="flex gap-1 rounded-xl p-1 mb-6 w-fit"
+          style={{
+            background: '#1e1e2a',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
           {[
             { key: 'profile', label: '🏢 Bedrijfsprofiel' },
             { key: 'api', label: '🔑 API Sleutels' },
@@ -41,11 +55,16 @@ export default async function SettingsPage({
             <a
               key={t.key}
               href={`/settings?tab=${t.key}`}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+              style={
                 activeTab === t.key
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+                  ? {
+                      background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                      color: 'white',
+                      boxShadow: '0 2px 10px rgba(99,102,241,0.4)',
+                    }
+                  : { color: '#a0a0b0' }
+              }
             >
               {t.label}
             </a>
